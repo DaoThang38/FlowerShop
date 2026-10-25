@@ -83,34 +83,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function getStoredAdmins() {
     let admins = JSON.parse(localStorage.getItem('owenfleur_admins'));
-    if (!admins || admins.length === 0) {
+    // If admins has mock "Lê Hoàng" or is empty, cleanly seed with ONLY the single Master Account
+    const hasMock = admins && admins.some(a => a.name && (a.name.includes('Lê Hoàng') || a.username === 'florist_lan'));
+    if (!admins || admins.length === 0 || hasMock) {
       admins = [
         {
-          id: 'adm_1',
+          id: 'adm_master',
           username: 'admin',
           password: 'admin123',
-          name: 'Lê Hoàng (Chủ Tiệm)',
-          role: 'Quản lý trưởng',
+          name: 'Chủ Tiệm Owen Fleur',
+          role: 'Chủ Tiệm (Super Admin)',
           avatar: '👑',
-          createdAt: '2026-10-01'
-        },
-        {
-          id: 'adm_2',
-          username: 'florist_lan',
-          password: '123456',
-          name: 'Nguyễn Ngọc Lan',
-          role: 'Florist cắm hoa',
-          avatar: '🌸',
-          createdAt: '2026-10-10'
-        },
-        {
-          id: 'adm_3',
-          username: 'cskh_mai',
-          password: '123456',
-          name: 'Trần Mai Linh',
-          role: 'Nhân viên CSKH & Bán hàng',
-          avatar: '🎧',
-          createdAt: '2026-10-15'
+          isMaster: true,
+          createdAt: new Date().toISOString().split('T')[0]
         }
       ];
       localStorage.setItem('owenfleur_admins', JSON.stringify(admins));
@@ -120,7 +105,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function getStoredCurrentAdmin() {
     try {
-      const cur = JSON.parse(localStorage.getItem('owenfleur_current_admin'));
+      // Prioritize active session storage so closing browser/tab requires clean login
+      let cur = JSON.parse(sessionStorage.getItem('owenfleur_current_admin'));
+      if (!cur) {
+        cur = JSON.parse(localStorage.getItem('owenfleur_current_admin'));
+      }
+      // If cached profile has mock "Lê Hoàng", clear it immediately!
+      if (cur && cur.name && cur.name.includes('Lê Hoàng')) {
+        sessionStorage.removeItem('owenfleur_current_admin');
+        localStorage.removeItem('owenfleur_current_admin');
+        return null;
+      }
       return cur || null;
     } catch(e) {
       return null;
@@ -172,6 +167,16 @@ document.addEventListener('DOMContentLoaded', () => {
     navItems.forEach(item => {
       item.addEventListener('click', () => {
         const tab = item.getAttribute('data-tab');
+
+        // Check master permission for Staff Management and Settings
+        if ((tab === 'admins' || tab === 'settings') && state.currentAdmin) {
+          const isMaster = state.currentAdmin.isMaster || state.currentAdmin.username === 'admin';
+          if (!isMaster) {
+            alert('⚠️ Quyền truy cập bị từ chối: Chỉ Tài Khoản Tổng (Chủ Tiệm) mới có quyền truy cập mục này!');
+            return;
+          }
+        }
+
         state.currentTab = tab;
 
         navItems.forEach(i => i.classList.remove('active'));
@@ -1185,7 +1190,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const loginPass = document.getElementById('loginPassword');
     const loginError = document.getElementById('loginErrorMsg');
     const logoutBtn = document.getElementById('logoutBtn');
-    const quickAccBtns = document.querySelectorAll('.quick-acc-btn');
     const rememberMeCheckbox = document.getElementById('rememberMeCheckbox');
     const togglePasswordBtn = document.getElementById('togglePasswordBtn');
 
@@ -1214,19 +1218,6 @@ document.addEventListener('DOMContentLoaded', () => {
       if (loginOverlay) loginOverlay.classList.remove('hidden');
     }
 
-    // Quick fill credentials & submit
-    quickAccBtns.forEach(btn => {
-      btn.addEventListener('click', () => {
-        const u = btn.getAttribute('data-user');
-        const p = btn.getAttribute('data-pass');
-        if (loginUser && loginPass) {
-          loginUser.value = u;
-          loginPass.value = p;
-          loginForm.dispatchEvent(new Event('submit'));
-        }
-      });
-    });
-
     if (loginForm) {
       loginForm.addEventListener('submit', (e) => {
         e.preventDefault();
@@ -1236,12 +1227,14 @@ document.addEventListener('DOMContentLoaded', () => {
         const found = state.admins.find(a => a.username.toLowerCase() === username && a.password === password);
         if (found) {
           state.currentAdmin = found;
-          localStorage.setItem('owenfleur_current_admin', JSON.stringify(found));
+          sessionStorage.setItem('owenfleur_current_admin', JSON.stringify(found));
 
           // Handle remember me
           if (rememberMeCheckbox && rememberMeCheckbox.checked) {
+            localStorage.setItem('owenfleur_current_admin', JSON.stringify(found));
             localStorage.setItem('owenfleur_remember_user', username);
           } else {
+            localStorage.removeItem('owenfleur_current_admin');
             localStorage.removeItem('owenfleur_remember_user');
           }
 
@@ -1266,8 +1259,12 @@ document.addEventListener('DOMContentLoaded', () => {
       logoutBtn.addEventListener('click', () => {
         if (confirm('Bạn có chắc chắn muốn đăng xuất khỏi hệ thống quản trị?')) {
           state.currentAdmin = null;
+          sessionStorage.removeItem('owenfleur_current_admin');
           localStorage.removeItem('owenfleur_current_admin');
-          if (loginOverlay) loginOverlay.classList.remove('hidden');
+          if (loginOverlay) {
+            loginOverlay.classList.remove('hidden');
+            if (loginPass) loginPass.value = '';
+          }
           showAdminToast('Đã đăng xuất tài khoản thành công.', 'info');
         }
       });
@@ -1281,11 +1278,24 @@ document.addEventListener('DOMContentLoaded', () => {
     const nameEl = document.getElementById('currentUserName');
     const roleEl = document.getElementById('currentUserRole');
     const creatorBadge = document.getElementById('currentAdminNameBadge');
+    const navItemAdmins = document.getElementById('navItemAdmins');
+    const navItemSettings = document.getElementById('navItemSettings');
 
     if (avatarEl) avatarEl.textContent = cur.avatar || '👤';
     if (nameEl) nameEl.textContent = cur.name;
     if (roleEl) roleEl.textContent = cur.role;
     if (creatorBadge) creatorBadge.textContent = `${cur.name} (${cur.role})`;
+
+    // Phân quyền bảo mật: Chỉ Tài Khoản Tổng (Master Admin - admin) mới thấy mục Phân Quyền & Cài Đặt
+    const isMaster = cur.isMaster || cur.username === 'admin';
+    if (navItemAdmins) navItemAdmins.style.display = isMaster ? 'flex' : 'none';
+    if (navItemSettings) navItemSettings.style.display = isMaster ? 'flex' : 'none';
+
+    // Nếu tài khoản phụ đang đứng ở tab bị cấm thì chuyển ngay về tab Quản lý đơn hàng
+    if (!isMaster && (state.currentTab === 'admins' || state.currentTab === 'settings')) {
+      const ordersNav = document.querySelector('[data-tab="orders"]');
+      if (ordersNav) ordersNav.click();
+    }
   }
 
   // --------------------------------------------------------------------------
@@ -1300,6 +1310,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (openAddAdminModalBtn) {
       openAddAdminModalBtn.addEventListener('click', () => {
+        const isMaster = state.currentAdmin && (state.currentAdmin.isMaster || state.currentAdmin.username === 'admin');
+        if (!isMaster) {
+          alert('⚠️ Chỉ Tài Khoản Tổng mới có quyền tạo thêm tài khoản quản trị!');
+          return;
+        }
         if (addAdminModal) addAdminModal.classList.add('active');
       });
     }
@@ -1315,6 +1330,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (addAdminForm) {
       addAdminForm.addEventListener('submit', (e) => {
         e.preventDefault();
+        const isMaster = state.currentAdmin && (state.currentAdmin.isMaster || state.currentAdmin.username === 'admin');
+        if (!isMaster) {
+          alert('⚠️ Chỉ Tài Khoản Tổng mới có quyền cấp tài khoản mới!');
+          return;
+        }
+
         const name = document.getElementById('newAdminName').value.trim();
         const username = document.getElementById('newAdminUsername').value.trim().toLowerCase();
         const password = document.getElementById('newAdminPassword').value.trim();
@@ -1326,10 +1347,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         let avatar = '👤';
-        if (role.includes('Quản lý')) avatar = '👑';
-        else if (role.includes('Florist')) avatar = '🌸';
+        if (role.includes('Quản lý') || role.includes('Chủ')) avatar = '👑';
+        else if (role.includes('Florist') || role.includes('Cắm')) avatar = '🌸';
         else if (role.includes('CSKH') || role.includes('Bán hàng')) avatar = '🎧';
-        else if (role.includes('Shipper')) avatar = '🚚';
+        else if (role.includes('Shipper') || role.includes('Giao')) avatar = '🚚';
 
         const newAdmin = {
           id: 'adm_' + Date.now(),
@@ -1338,6 +1359,7 @@ document.addEventListener('DOMContentLoaded', () => {
           name,
           role,
           avatar,
+          isMaster: false,
           createdAt: new Date().toISOString().split('T')[0]
         };
 
@@ -1355,10 +1377,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!tableBody) return;
 
     tableBody.innerHTML = state.admins.map(adm => {
-      const isRoot = adm.username === 'admin';
+      const isRoot = adm.isMaster || adm.username === 'admin';
       let roleClass = 'sales';
-      if (adm.role.includes('Quản lý')) roleClass = 'owner';
-      else if (adm.role.includes('Florist')) roleClass = 'florist';
+      if (isRoot) roleClass = 'owner';
+      else if (adm.role && (adm.role.includes('Florist') || adm.role.includes('Cắm'))) roleClass = 'florist';
 
       const isCurrent = state.currentAdmin && state.currentAdmin.username === adm.username;
 
@@ -1371,7 +1393,8 @@ document.addEventListener('DOMContentLoaded', () => {
               </span>
               <div>
                 <strong style="color: var(--admin-primary); font-size: 0.95rem;">${adm.name}</strong>
-                ${isCurrent ? '<span style="font-size: 0.75rem; color: #2a9d8f; font-weight: 800; margin-left: 6px; background: #e6f4ea; padding: 2px 6px; border-radius: 4px;">(Đang đăng nhập)</span>' : ''}
+                ${isRoot ? '<span style="font-size: 0.72rem; color: #b45309; font-weight: 800; margin-left: 6px; background: #fef3c7; padding: 2px 6px; border-radius: 4px;">👑 TÀI KHOẢN TỔNG</span>' : ''}
+                ${isCurrent ? '<span style="font-size: 0.72rem; color: #2a9d8f; font-weight: 800; margin-left: 6px; background: #e6f4ea; padding: 2px 6px; border-radius: 4px;">(Bạn đang đăng nhập)</span>' : ''}
               </div>
             </div>
           </td>
@@ -1388,7 +1411,7 @@ document.addEventListener('DOMContentLoaded', () => {
           <td style="font-size: 0.85rem; color: var(--admin-muted);">${adm.createdAt || 'Mặc định'}</td>
           <td>
             ${isRoot ? `
-              <span style="font-size: 0.8rem; color: var(--admin-muted); font-style: italic;">Quản trị gốc (Cố định)</span>
+              <span style="font-size: 0.8rem; color: var(--admin-muted); font-style: italic;">Quản trị tối cao (Không thể xóa)</span>
             ` : `
               <button class="btn-admin" style="padding: 6px 12px; font-size: 0.8rem; background: #fee2e2; color: #991b1b;" onclick="deleteAdminById('${adm.id}')">
                 🗑️ Xóa Tài Khoản
@@ -1401,10 +1424,15 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   window.deleteAdminById = function(adminId) {
+    const isMaster = state.currentAdmin && (state.currentAdmin.isMaster || state.currentAdmin.username === 'admin');
+    if (!isMaster) {
+      alert('⚠️ Chỉ Tài Khoản Tổng mới có quyền xóa tài khoản nhân sự!');
+      return;
+    }
     const adm = state.admins.find(a => a.id === adminId);
     if (!adm) return;
-    if (adm.username === 'admin') {
-      alert('Không thể xóa tài khoản Quản trị viên gốc!');
+    if (adm.isMaster || adm.username === 'admin') {
+      alert('Không thể xóa Tài Khoản Tổng của hệ thống!');
       return;
     }
     if (confirm(`Bạn có chắc chắn muốn xóa tài khoản của "${adm.name}" (${adm.username}) khỏi hệ thống?`)) {

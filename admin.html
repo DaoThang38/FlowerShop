@@ -105,38 +105,8 @@
         </button>
       </form>
 
-      <!-- Quick Switch / Demo Accounts Collapsible -->
-      <details class="login-demo-details" style="margin-top: 18px; background: #f8faf9; border-radius: 8px; padding: 8px 12px; border: 1px dashed #d1e2d8;">
-        <summary style="font-size: 0.75rem; font-weight: 700; color: var(--admin-muted); cursor: pointer; text-transform: uppercase;">
-          ⚡ Đăng nhập nhanh tài khoản mẫu (Click để chọn)
-        </summary>
-        <div class="quick-acc-grid" style="margin-top: 8px;">
-          <button type="button" class="quick-acc-btn" data-user="admin" data-pass="admin123" title="Chủ tiệm / Quản lý trưởng">
-            <span class="acc-avatar">👑</span>
-            <div class="acc-details">
-              <strong>admin</strong> (Chủ tiệm)
-              <small>Lê Hoàng — Quản lý trưởng</small>
-            </div>
-          </button>
-          <button type="button" class="quick-acc-btn" data-user="florist_lan" data-pass="123456" title="Florist cắm hoa">
-            <span class="acc-avatar">🌸</span>
-            <div class="acc-details">
-              <strong>florist_lan</strong> (Thợ cắm hoa)
-              <small>Nguyễn Ngọc Lan — Florist</small>
-            </div>
-          </button>
-          <button type="button" class="quick-acc-btn" data-user="cskh_mai" data-pass="123456" title="CSKH & Trực đơn">
-            <span class="acc-avatar">🎧</span>
-            <div class="acc-details">
-              <strong>cskh_mai</strong> (CSKH)
-              <small>Trần Mai Linh — Bán hàng</small>
-            </div>
-          </button>
-        </div>
-      </details>
-
-      <div style="text-align: center; margin-top: 14px; font-size: 0.78rem; color: var(--admin-muted); line-height: 1.4;">
-        ℹ️ Khách mua hoa vãng lai truy cập trực tiếp tại <a href="index.html" target="_blank" style="color: var(--admin-accent); font-weight: 700;">Shop Khách Hàng</a> (Không cần đăng nhập).
+      <div style="text-align: center; margin-top: 18px; font-size: 0.8rem; color: var(--admin-muted); line-height: 1.5; background: #f8faf9; padding: 12px; border-radius: 8px; border: 1px solid #e3eae5;">
+        🔒 <strong>Cổng Quản Trị Nội Bộ:</strong> Chỉ dành cho Chủ Tiệm và Nhân Sự được cấp quyền. Khách mua hoa vãng lai truy cập tại <a href="index.html" target="_blank" style="color: var(--admin-accent); font-weight: 700;">Website Cửa Hàng</a> (Không cần tài khoản).
       </div>
     </div>
   </div>
@@ -169,11 +139,11 @@
         <span>🌸</span>
         <span>Sản Phẩm & Bảng Giá</span>
       </div>
-      <div class="admin-nav-item" data-tab="admins">
+      <div class="admin-nav-item" data-tab="admins" id="navItemAdmins">
         <span>🛡️</span>
-        <span>Quản Trị Viên & Nhân Sự</span>
+        <span>Phân Quyền Nhân Sự</span>
       </div>
-      <div class="admin-nav-item" data-tab="settings">
+      <div class="admin-nav-item" data-tab="settings" id="navItemSettings">
         <span>⚙️</span>
         <span>Cài Đặt Cửa Hàng & QR</span>
       </div>
@@ -208,8 +178,8 @@
         <div class="admin-user-profile" id="topbarUserProfile">
           <div class="user-avatar" id="currentUserAvatar">👑</div>
           <div class="user-info">
-            <div class="user-name" id="currentUserName">Lê Hoàng</div>
-            <div class="user-role" id="currentUserRole">Chủ Tiệm</div>
+            <div class="user-name" id="currentUserName">Chủ Tiệm Owen Fleur</div>
+            <div class="user-role" id="currentUserRole">Quản Trị Viên Tối Cao</div>
           </div>
           <button class="btn-logout" id="logoutBtn" title="Đăng xuất khỏi hệ thống">
             🚪 Đăng Xuất
