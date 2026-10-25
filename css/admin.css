@@ -407,6 +407,18 @@ body {
   background: #fffafa;
 }
 
+.order-row-card.is-cancelled {
+  border-left: 6px solid #94a3b8;
+  background: #f8fafc;
+  opacity: 0.82;
+  border-style: dashed;
+}
+
+.order-row-card.is-cancelled .order-id {
+  text-decoration: line-through;
+  color: #64748b;
+}
+
 .order-header-row {
   display: flex;
   justify-content: space-between;

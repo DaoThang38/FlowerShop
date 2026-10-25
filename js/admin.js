@@ -269,8 +269,17 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     filtered.sort((a, b) => {
-      if (a.isUrgent && !b.isUrgent) return -1;
-      if (!a.isUrgent && b.isUrgent) return 1;
+      // 1. Cancelled orders always go to the very bottom!
+      if (a.status === 'cancelled' && b.status !== 'cancelled') return 1;
+      if (a.status !== 'cancelled' && b.status === 'cancelled') return -1;
+
+      // 2. Urgent active orders go to the very top
+      const aUrgent = a.isUrgent && a.status !== 'delivered' && a.status !== 'cancelled';
+      const bUrgent = b.isUrgent && b.status !== 'delivered' && b.status !== 'cancelled';
+      if (aUrgent && !bUrgent) return -1;
+      if (!aUrgent && bUrgent) return 1;
+
+      // 3. Newest orders first
       return new Date(b.createdAt) - new Date(a.createdAt);
     });
 
@@ -290,7 +299,11 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
+    let hasShownArchiveHeader = false;
+    const cancelledCount = state.orders.filter(o => o.status === 'cancelled').length;
+
     ordersListContainer.innerHTML = filtered.map(order => {
+      const isCancelled = order.status === 'cancelled';
       const safeId = window.escapeHtml ? window.escapeHtml(order.id) : order.id;
       const safeName = window.escapeHtml ? window.escapeHtml(order.recipientName) : order.recipientName;
       const safePhone = window.escapeHtml ? window.escapeHtml(order.recipientPhone) : order.recipientPhone;
@@ -300,12 +313,26 @@ document.addEventListener('DOMContentLoaded', () => {
       const safeCardMsg = window.escapeHtml ? window.escapeHtml(order.cardMessage || '') : (order.cardMessage || '');
       const safeFloristNotes = window.escapeHtml ? window.escapeHtml(order.floristNotes || '') : (order.floristNotes || '');
 
-      return `
-      <div class="order-row-card ${order.isUrgent ? 'is-urgent' : ''}" id="orderCard-${safeId}">
+      let archiveHeaderHtml = '';
+      if (state.currentFilter === 'all' && isCancelled && !hasShownArchiveHeader) {
+        hasShownArchiveHeader = true;
+        archiveHeaderHtml = `
+          <div style="margin: 36px 0 16px 0; display: flex; align-items: center; gap: 14px;">
+            <div style="height: 1px; flex: 1; background: #cbd5e1;"></div>
+            <span style="font-size: 0.88rem; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 1px; display: inline-flex; align-items: center; gap: 6px;">
+              🗄️ Khu Vực Lưu Trữ Đơn Đã Hủy (${cancelledCount} đơn)
+            </span>
+            <div style="height: 1px; flex: 1; background: #cbd5e1;"></div>
+          </div>
+        `;
+      }
+
+      return archiveHeaderHtml + `
+      <div class="order-row-card ${isCancelled ? 'is-cancelled' : (order.isUrgent ? 'is-urgent' : '')}" id="orderCard-${safeId}">
         <div class="order-header-row">
           <div class="order-code-group">
             <span class="order-id">#${safeId}</span>
-            ${order.isUrgent ? `<span class="urgent-tag">⚡ KHẨN CẤP / HỎA TỐC</span>` : ''}
+            ${isCancelled ? `<span style="background: #fee2e2; color: #991b1b; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 800;">❌ ĐÃ HỦY / LƯU TRỮ</span>` : (order.isUrgent ? `<span class="urgent-tag">⚡ KHẨN CẤP / HỎA TỐC</span>` : '')}
             <span style="font-size: 0.8rem; color: var(--admin-muted);">
               Đặt lúc: ${new Date(order.createdAt).toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'})} - ${new Date(order.createdAt).toLocaleDateString('vi-VN')}
             </span>
@@ -315,7 +342,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <span class="status-badge ${order.status}">
               ${getStatusBadgeName(order.status)}
             </span>
-            <span style="font-size: 1.15rem; font-weight: 800; color: var(--admin-primary);">
+            <span style="font-size: 1.15rem; font-weight: 800; color: ${isCancelled ? '#94a3b8' : 'var(--admin-primary)'};">
               ${formatCurrency(order.total)}
             </span>
           </div>
@@ -351,7 +378,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <div><span class="label">Người nhận:</span> <strong>${safeName}</strong></div>
             <div><span class="label">Số điện thoại:</span> <a href="tel:${safePhone}" style="color: var(--admin-accent); font-weight: 600;">${safePhone}</a></div>
             <div><span class="label">Địa chỉ:</span> ${safeAddress}</div>
-            <div style="margin-top: 4px; color: var(--admin-urgent); font-weight: 600;">
+            <div style="margin-top: 4px; color: ${isCancelled ? '#64748b' : 'var(--admin-urgent)'}; font-weight: 600;">
               ⏰ Giờ hẹn giao: ${safeTimeLabel} (${safeDate})
             </div>
           </div>
@@ -362,7 +389,7 @@ document.addEventListener('DOMContentLoaded', () => {
               💳 Thanh toán & Ghi chú florist:
             </div>
             <div style="font-size: 0.85rem; margin-bottom: 8px;">
-              <span style="display: inline-block; padding: 3px 8px; border-radius: 4px; background: #edf7f2; color: #1e5e3a; font-weight: 600;">
+              <span style="display: inline-block; padding: 3px 8px; border-radius: 4px; background: ${isCancelled ? '#f1f5f9' : '#edf7f2'}; color: ${isCancelled ? '#64748b' : '#1e5e3a'}; font-weight: 600;">
                 ${window.escapeHtml ? window.escapeHtml(order.paymentStatus || order.paymentMethod) : (order.paymentStatus || order.paymentMethod)}
               </span>
             </div>
@@ -382,27 +409,36 @@ document.addEventListener('DOMContentLoaded', () => {
               <option value="photo_sent" ${order.status === 'photo_sent' ? 'selected' : ''}>📸 Đã Cắm Xong - Chờ Duyệt Ảnh</option>
               <option value="delivering" ${order.status === 'delivering' ? 'selected' : ''}>🚚 Đang Giao Hoa Cho Khách</option>
               <option value="delivered" ${order.status === 'delivered' ? 'selected' : ''}>✅ Đã Giao Thành Công</option>
-              <option value="cancelled" ${order.status === 'cancelled' ? 'selected' : ''}>❌ Hủy Đơn Hàng</option>
+              <option value="cancelled" ${order.status === 'cancelled' ? 'selected' : ''}>❌ Hủy Đơn Hàng (Lưu trữ)</option>
             </select>
           </div>
 
           <div class="order-btns-group">
-            ${(order.recipientPhone || order.senderPhone) ? `
-            <a href="https://zalo.me/${(order.recipientPhone || order.senderPhone).replace(/[^0-9]/g, '')}" target="_blank" class="btn-admin" style="background: #0068ff; color: #fff; padding: 7px 12px; font-size: 0.8rem; text-decoration: none;" title="Nhắn Zalo gửi ảnh duyệt hoa">
-              💬 Zalo Khách
-            </a>
-            <a href="tel:${(order.recipientPhone || order.senderPhone).replace(/[^0-9]/g, '')}" class="btn-admin btn-admin-outline" style="padding: 7px 10px; font-size: 0.8rem; text-decoration: none;" title="Gọi điện thoại">
-              📞 Gọi
-            </a>` : ''}
-            <button class="btn-admin ${order.isUrgent ? 'btn-admin-outline' : 'btn-admin-urgent'}" data-action="toggle-urgent" data-id="${safeId}">
-              ${order.isUrgent ? '⚡ Hủy Khẩn Cấp' : '⚡ ĐẨY HỎA TỐC GẤP'}
-            </button>
-            <button class="btn-admin btn-admin-outline" data-action="print-slip" data-id="${safeId}">
-              🖨️ In Phiếu Giao & Thiệp
-            </button>
-            <button class="btn-admin btn-admin-outline" data-action="edit-note" data-id="${safeId}">
-              📝 Ghi Chú
-            </button>
+            ${isCancelled ? `
+              <button class="btn-admin" style="background: #e8f5e9; color: #1e5e3a; border: 1px solid #c2e2d0; font-size: 0.82rem; padding: 6px 14px;" onclick="restoreOrderById('${safeId}')" title="Khôi phục lại đơn hàng về trạng thái Chờ xác nhận">
+                ♻️ Khôi Phục Đơn
+              </button>
+              <button class="btn-admin" style="background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; font-size: 0.82rem; padding: 6px 14px;" onclick="deleteOrderPermanently('${safeId}')" title="Xóa vĩnh viễn đơn hàng này">
+                🗑️ Xóa Vĩnh Viễn
+              </button>
+            ` : `
+              ${(order.recipientPhone || order.senderPhone) ? `
+              <a href="https://zalo.me/${(order.recipientPhone || order.senderPhone).replace(/[^0-9]/g, '')}" target="_blank" class="btn-admin" style="background: #0068ff; color: #fff; padding: 7px 12px; font-size: 0.8rem; text-decoration: none;" title="Nhắn Zalo gửi ảnh duyệt hoa">
+                💬 Zalo Khách
+              </a>
+              <a href="tel:${(order.recipientPhone || order.senderPhone).replace(/[^0-9]/g, '')}" class="btn-admin btn-admin-outline" style="padding: 7px 10px; font-size: 0.8rem; text-decoration: none;" title="Gọi điện thoại">
+                📞 Gọi
+              </a>` : ''}
+              <button class="btn-admin ${order.isUrgent ? 'btn-admin-outline' : 'btn-admin-urgent'}" data-action="toggle-urgent" data-id="${safeId}">
+                ${order.isUrgent ? '⚡ Hủy Khẩn Cấp' : '⚡ ĐẨY HỎA TỐC GẤP'}
+              </button>
+              <button class="btn-admin btn-admin-outline" data-action="print-slip" data-id="${safeId}">
+                🖨️ In Phiếu Giao & Thiệp
+              </button>
+              <button class="btn-admin btn-admin-outline" data-action="edit-note" data-id="${safeId}">
+                📝 Ghi Chú
+              </button>
+            `}
           </div>
         </div>
       </div>
@@ -442,25 +478,69 @@ document.addEventListener('DOMContentLoaded', () => {
       case 'photo_sent': return '📸 Đã Gửi Ảnh Duyệt';
       case 'delivering': return '🚚 Đang Đi Giao';
       case 'delivered': return '✅ Giao Thành Công';
-      case 'cancelled': return '❌ Đã Hủy';
+      case 'cancelled': return '❌ Đã Hủy (Lưu trữ)';
       default: return status;
     }
   }
 
   function updateOrderStatus(orderId, newStatus) {
     const order = state.orders.find(o => o.id === orderId);
-    if (order) {
-      order.status = newStatus;
-      saveOrders();
-      if (window.OwenCloud && OwenCloud.updateOrderStatus) {
-        OwenCloud.updateOrderStatus(orderId, newStatus, { isUrgent: order.isUrgent });
+    if (!order) return;
+
+    if (newStatus === 'cancelled') {
+      const confirmCancel = confirm(`Bạn có chắc chắn muốn HỦY đơn hàng #${orderId}?\nĐơn sẽ được tự động chuyển xuống khu vực lưu trữ dưới cùng.`);
+      if (!confirmCancel) {
+        renderOrders();
+        return;
       }
-      updateMetrics();
-      renderOrders();
-      renderCustomersTable();
+      order.isUrgent = false;
+    }
+
+    order.status = newStatus;
+    saveOrders();
+    if (window.OwenCloud && OwenCloud.updateOrderStatus) {
+      OwenCloud.updateOrderStatus(orderId, newStatus, { isUrgent: order.isUrgent });
+    }
+    updateMetrics();
+    renderOrders();
+    renderCustomersTable();
+
+    if (newStatus === 'cancelled') {
+      showAdminToast(`❌ Đã hủy đơn #${orderId} và chuyển xuống khu vực lưu trữ dưới cùng!`, 'info');
+    } else {
       showAdminToast(`Đã chuyển đơn #${orderId} sang trạng thái: "${getStatusBadgeName(newStatus)}"`, 'success');
     }
   }
+
+  window.restoreOrderById = function(orderId) {
+    const order = state.orders.find(o => o.id === orderId);
+    if (!order) return;
+    order.status = 'pending';
+    saveOrders();
+    if (window.OwenCloud && OwenCloud.updateOrderStatus) {
+      OwenCloud.updateOrderStatus(orderId, 'pending', { isUrgent: order.isUrgent });
+    }
+    updateMetrics();
+    renderOrders();
+    renderCustomersTable();
+    showAdminToast(`♻️ Đã khôi phục đơn #${orderId} về trạng thái Chờ Xác Nhận!`, 'success');
+  };
+
+  window.deleteOrderPermanently = function(orderId) {
+    const isMaster = state.currentAdmin && (state.currentAdmin.isMaster || state.currentAdmin.username === 'admin');
+    if (!isMaster) {
+      alert('⚠️ Chỉ Tài Khoản Tổng mới có quyền xóa vĩnh viễn đơn hàng!');
+      return;
+    }
+    if (confirm(`⚠️ CẢNH BÁO: Bạn có chắc chắn muốn XÓA VĨNH VIỄN đơn hàng #${orderId}?\nHành động này không thể hoàn tác!`)) {
+      state.orders = state.orders.filter(o => o.id !== orderId);
+      saveOrders();
+      updateMetrics();
+      renderOrders();
+      renderCustomersTable();
+      showAdminToast(`🗑️ Đã xóa vĩnh viễn đơn hàng #${orderId}`, 'info');
+    }
+  };
 
   function toggleOrderUrgent(orderId) {
     const order = state.orders.find(o => o.id === orderId);
