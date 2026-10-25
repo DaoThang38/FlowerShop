@@ -1,0 +1,975 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Owen Fleur Admin Portal | Quản Lý Đơn Hàng & Vận Hành Tiệm Hoa</title>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,700;1,400&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="css/admin.css">
+  <style>
+    /* Modal styles */
+    .admin-modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.65);
+      backdrop-filter: blur(4px);
+      z-index: 2000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.25s ease;
+    }
+    .admin-modal-overlay.active {
+      opacity: 1;
+      visibility: visible;
+    }
+    .admin-modal-box {
+      background: #fff;
+      border-radius: 12px;
+      max-width: 760px;
+      width: 100%;
+      max-height: 90vh;
+      overflow-y: auto;
+      position: relative;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.25);
+    }
+    .admin-modal-close {
+      position: absolute;
+      top: 14px;
+      right: 14px;
+      background: #eee;
+      border: none;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      font-size: 1.2rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 10;
+    }
+    .admin-modal-close:hover {
+      background: #ddd;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Fullscreen Multi-Admin Login Overlay -->
+  <div class="admin-login-overlay" id="adminLoginOverlay">
+    <div class="login-card" style="max-width: 440px;">
+      <div class="login-header">
+        <div class="login-brand-icon">🌿</div>
+        <h2 style="font-family: var(--font-serif); font-size: 1.65rem; color: var(--admin-primary); margin-top: 10px;">Owen Fleur</h2>
+        <p style="color: var(--admin-gold); text-transform: uppercase; font-size: 0.72rem; letter-spacing: 2px; font-weight: 700;">Cổng Quản Trị & Vận Hành Tiệm Hoa Sáp</p>
+        <p style="color: var(--admin-muted); font-size: 0.85rem; margin-top: 6px;">Chào mừng đội ngũ Quản lý & Florist cắm hoa Owen Fleur</p>
+      </div>
+
+      <form id="adminLoginForm">
+        <div class="settings-group" style="margin-bottom: 12px;">
+          <label>Tên Đăng Nhập (Username / Email) *</label>
+          <input type="text" id="loginUsername" class="settings-control" required placeholder="Nhập tên đăng nhập (ví dụ: admin)">
+        </div>
+
+        <div class="settings-group" style="margin-bottom: 12px;">
+          <label>Mật Khẩu *</label>
+          <div style="position: relative;">
+            <input type="password" id="loginPassword" class="settings-control" required placeholder="Nhập mật khẩu..." style="padding-right: 44px;">
+            <button type="button" id="togglePasswordBtn" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; font-size: 1.15rem; cursor: pointer; color: var(--admin-muted); padding: 4px;" title="Hiện / Ẩn mật khẩu">
+              👁️
+            </button>
+          </div>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; font-size: 0.82rem;">
+          <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; color: var(--admin-muted);">
+            <input type="checkbox" id="rememberMeCheckbox" style="accent-color: var(--admin-primary); width: 15px; height: 15px;">
+            <span>Ghi nhớ đăng nhập trên máy này</span>
+          </label>
+          <span style="color: var(--admin-accent); font-weight: 600; cursor: pointer;" title="Vui lòng liên hệ Chủ Tiệm để được cấp lại mật khẩu">Cần hỗ trợ?</span>
+        </div>
+
+        <div id="loginErrorMsg" style="display: none; color: #dc2626; background: #fee2e2; padding: 10px; border-radius: 6px; font-size: 0.85rem; margin-bottom: 14px; text-align: center;"></div>
+
+        <button type="submit" class="btn-admin btn-admin-primary" style="width: 100%; padding: 13px; font-size: 1rem; justify-content: center;">
+          🔐 Đăng Nhập Vào Hệ Thống
+        </button>
+      </form>
+
+      <!-- Quick Switch / Demo Accounts Collapsible -->
+      <details class="login-demo-details" style="margin-top: 18px; background: #f8faf9; border-radius: 8px; padding: 8px 12px; border: 1px dashed #d1e2d8;">
+        <summary style="font-size: 0.75rem; font-weight: 700; color: var(--admin-muted); cursor: pointer; text-transform: uppercase;">
+          ⚡ Đăng nhập nhanh tài khoản mẫu (Click để chọn)
+        </summary>
+        <div class="quick-acc-grid" style="margin-top: 8px;">
+          <button type="button" class="quick-acc-btn" data-user="admin" data-pass="admin123" title="Chủ tiệm / Quản lý trưởng">
+            <span class="acc-avatar">👑</span>
+            <div class="acc-details">
+              <strong>admin</strong> (Chủ tiệm)
+              <small>Lê Hoàng — Quản lý trưởng</small>
+            </div>
+          </button>
+          <button type="button" class="quick-acc-btn" data-user="florist_lan" data-pass="123456" title="Florist cắm hoa">
+            <span class="acc-avatar">🌸</span>
+            <div class="acc-details">
+              <strong>florist_lan</strong> (Thợ cắm hoa)
+              <small>Nguyễn Ngọc Lan — Florist</small>
+            </div>
+          </button>
+          <button type="button" class="quick-acc-btn" data-user="cskh_mai" data-pass="123456" title="CSKH & Trực đơn">
+            <span class="acc-avatar">🎧</span>
+            <div class="acc-details">
+              <strong>cskh_mai</strong> (CSKH)
+              <small>Trần Mai Linh — Bán hàng</small>
+            </div>
+          </button>
+        </div>
+      </details>
+
+      <div style="text-align: center; margin-top: 14px; font-size: 0.78rem; color: var(--admin-muted); line-height: 1.4;">
+        ℹ️ Khách mua hoa vãng lai truy cập trực tiếp tại <a href="index.html" target="_blank" style="color: var(--admin-accent); font-weight: 700;">Shop Khách Hàng</a> (Không cần đăng nhập).
+      </div>
+    </div>
+  </div>
+
+  <!-- Sidebar -->
+  <aside class="admin-sidebar">
+    <div class="admin-brand">
+      <div class="brand-icon">🌿</div>
+      <div class="brand-text">
+        <h2>Owen Fleur</h2>
+        <p>Merchant Portal</p>
+      </div>
+    </div>
+
+    <nav class="admin-nav">
+      <div class="admin-nav-item active" data-tab="orders">
+        <span>📦</span>
+        <span>Quản Lý Đơn Hàng</span>
+      </div>
+      <div class="admin-nav-item" data-tab="urgent">
+        <span>⚡</span>
+        <span>Đơn Hỏa Tốc / Khẩn</span>
+        <span class="urgent-badge-count" id="urgentCountBadge" style="display: none;">0</span>
+      </div>
+      <div class="admin-nav-item" data-tab="customers">
+        <span>👥</span>
+        <span>Sổ Khách Hàng (CRM)</span>
+      </div>
+      <div class="admin-nav-item" data-tab="products">
+        <span>🌸</span>
+        <span>Sản Phẩm & Bảng Giá</span>
+      </div>
+      <div class="admin-nav-item" data-tab="admins">
+        <span>🛡️</span>
+        <span>Quản Trị Viên & Nhân Sự</span>
+      </div>
+      <div class="admin-nav-item" data-tab="settings">
+        <span>⚙️</span>
+        <span>Cài Đặt Cửa Hàng & QR</span>
+      </div>
+    </nav>
+
+    <div class="admin-sidebar-footer">
+      <a href="index.html" target="_blank" class="store-link-btn" title="Mở trang bán hàng dành cho khách">
+        <span>🌸</span>
+        <span>Xem Shop Khách Hàng</span>
+        <span>↗</span>
+      </a>
+    </div>
+  </aside>
+
+  <!-- Main Content Area -->
+  <main class="admin-main">
+    
+    <!-- Top Header -->
+    <header class="admin-header">
+      <div>
+        <h1>Bảng Điều Khiển Tiệm Hoa</h1>
+        <p style="color: var(--admin-muted); font-size: 0.92rem; margin-top: 4px;">
+          Theo dõi đơn hàng, quản lý khách hàng, sửa sản phẩm và cấu hình thanh toán QR.
+        </p>
+      </div>
+      <div class="admin-header-actions" style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+        <button class="btn-admin btn-admin-primary" id="openManualOrderModalBtn" style="background: var(--admin-primary); box-shadow: 0 4px 14px rgba(23, 47, 35, 0.2);">
+          ✨ + Tạo Đơn Hàng Mới
+        </button>
+
+        <!-- Current Logged In Admin Profile -->
+        <div class="admin-user-profile" id="topbarUserProfile">
+          <div class="user-avatar" id="currentUserAvatar">👑</div>
+          <div class="user-info">
+            <div class="user-name" id="currentUserName">Lê Hoàng</div>
+            <div class="user-role" id="currentUserRole">Chủ Tiệm</div>
+          </div>
+          <button class="btn-logout" id="logoutBtn" title="Đăng xuất khỏi hệ thống">
+            🚪 Đăng Xuất
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Metrics Cards Grid -->
+    <section class="stats-grid">
+      <div class="stat-card revenue">
+        <div class="stat-info">
+          <h3>Doanh Thu Hôm Nay</h3>
+          <div class="stat-value" id="metricRevenue">0₫</div>
+        </div>
+        <div class="stat-icon">💰</div>
+      </div>
+
+      <div class="stat-card urgent">
+        <div class="stat-info">
+          <h3>Cần Cắm Gấp / Hỏa Tốc</h3>
+          <div class="stat-value" id="metricUrgent" style="color: var(--admin-urgent);">0</div>
+        </div>
+        <div class="stat-icon">⚡</div>
+      </div>
+
+      <div class="stat-card crafting">
+        <div class="stat-info">
+          <h3>Đang Cắm Hoa (Crafting)</h3>
+          <div class="stat-value" id="metricCrafting">0</div>
+        </div>
+        <div class="stat-icon">✂️</div>
+      </div>
+
+      <div class="stat-card delivering">
+        <div class="stat-info">
+          <h3>Đang Giao Hàng Cho Khách</h3>
+          <div class="stat-value" id="metricDelivering">0</div>
+        </div>
+        <div class="stat-icon">🚚</div>
+      </div>
+    </section>
+
+    <!-- ================= VIEW 1: ORDERS ================= -->
+    <section class="admin-view-pane active" id="ordersView">
+      <!-- Filter Bar -->
+      <div class="orders-filter-bar">
+        <div class="filter-pills">
+          <button class="filter-pill active" data-status="all">Tất Cả Đơn</button>
+          <button class="filter-pill urgent-pill" data-status="urgent">⚡ Khẩn Cấp / Hỏa Tốc</button>
+          <button class="filter-pill" data-status="pending">⏳ Chờ Xác Nhận</button>
+          <button class="filter-pill" data-status="crafting">✂️ Đang Cắm Hoa</button>
+          <button class="filter-pill" data-status="photo_sent">📸 Đã Gửi Ảnh Duyệt</button>
+          <button class="filter-pill" data-status="delivering">🚚 Đang Giao</button>
+          <button class="filter-pill" data-status="delivered">✅ Giao Thành Công</button>
+          <button class="filter-pill" data-status="cancelled">❌ Đã Hủy</button>
+        </div>
+
+        <div class="order-search-box">
+          <span class="search-icon">🔍</span>
+          <input type="text" id="orderSearchInput" placeholder="Tìm theo mã đơn, tên khách, SĐT, địa chỉ...">
+        </div>
+      </div>
+
+      <!-- Orders List Container -->
+      <div class="orders-list-container" id="ordersListContainer">
+        <!-- Injected via JavaScript -->
+      </div>
+    </section>
+
+    <!-- View 2: Urgent Only (Shares same render logic) -->
+    <section class="admin-view-pane" id="urgentView">
+      <div style="background: #fffafa; border: 1px solid var(--admin-urgent); padding: 16px 20px; border-radius: var(--radius-md); margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between;">
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <span style="font-size: 1.8rem;">⚡</span>
+          <div>
+            <h3 style="color: var(--admin-urgent); margin: 0;">DANH SÁCH ĐƠN HÀNG HỎA TỐC & KHẨN CẤP</h3>
+            <p style="font-size: 0.85rem; color: var(--admin-muted); margin: 0;">Được ưu tiên cắm ngay lập tức để kịp giờ hẹn khách hàng hoặc giao trong 2 giờ.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= VIEW 3: CUSTOMERS DIRECTORY (CRM) ================= -->
+    <section class="admin-view-pane" id="customersView">
+      <div class="products-admin-card">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 14px;">
+          <div>
+            <h2 style="font-family: var(--font-serif); font-size: 1.5rem; color: var(--admin-primary);">
+              Sổ Danh Bạ Khách Hàng & Lịch Sử Mua Hoa
+            </h2>
+            <p style="color: var(--admin-muted); font-size: 0.88rem;">
+              Tự động lưu trữ thông tin tất cả khách đã đặt hoa để tiệm tiện chăm sóc, gọi điện, gửi thiệp hoặc tri ân khách VIP.
+            </p>
+          </div>
+          <div style="display: flex; gap: 10px;">
+            <input type="text" id="customerSearchInput" placeholder="Tìm khách theo tên, SĐT..." style="padding: 8px 14px; border-radius: 999px; border: 1px solid var(--admin-border); outline: none; font-size: 0.88rem;">
+            <button class="btn-admin btn-admin-primary" id="exportCustomersBtn">
+              📥 Xuất Danh Sách (CSV / Excel)
+            </button>
+          </div>
+        </div>
+
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>Khách Hàng (Người Nhận / Đặt)</th>
+              <th>Số Điện Thoại</th>
+              <th>Địa Chỉ Giao Thường Dùng</th>
+              <th>Số Đơn Đã Đặt</th>
+              <th>Tổng Chi Tiêu</th>
+              <th>Hạng Khách</th>
+              <th>Lần Mua Gần Nhất</th>
+              <th>Liên Hệ Nhanh</th>
+            </tr>
+          </thead>
+          <tbody id="customersTableBody">
+            <!-- Injected via JavaScript -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ================= VIEW 4: PRODUCTS & PRICING (FULL CRUD) ================= -->
+    <section class="admin-view-pane" id="productsView">
+      <div class="products-admin-card">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px;">
+          <div>
+            <h2 style="font-family: var(--font-serif); font-size: 1.5rem; color: var(--admin-primary);">Danh Sách Mẫu Hoa & Quản Lý Sản Phẩm</h2>
+            <p style="color: var(--admin-muted); font-size: 0.88rem;">Chỉnh sửa hình ảnh, giá bán, mô tả, thể loại hoa hoặc thêm mẫu hoa mới vào shop.</p>
+          </div>
+          <button class="btn-admin btn-admin-primary" id="addNewProductBtn">
+            🌸 + Thêm Mẫu Hoa Mới
+          </button>
+        </div>
+
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th style="width: 70px;">Hình Ảnh</th>
+              <th>Tên Mẫu Hoa</th>
+              <th>Thể Loại</th>
+              <th>Giá Bán</th>
+              <th>Nhãn / Tag</th>
+              <th>Tone Màu</th>
+              <th style="width: 170px;">Hành Động</th>
+            </tr>
+          </thead>
+          <tbody id="adminProductsTableBody">
+            <!-- Injected via JavaScript -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ================= VIEW 5: STORE SETTINGS & QR CONFIG ================= -->
+    <section class="admin-view-pane" id="settingsView">
+      <div class="settings-container">
+        <h2 style="font-family: var(--font-serif); font-size: 1.6rem; color: var(--admin-primary); margin-bottom: 8px;">
+          Cài Đặt Cửa Hàng & Cấu Hình Thanh Toán VietQR
+        </h2>
+        <p style="color: var(--admin-muted); font-size: 0.92rem; margin-bottom: 24px;">
+          Cấu hình thông tin thương hiệu và tài khoản ngân hàng nhận tiền. Khi khách đặt hoa bên portal người mua, mã QR thanh toán sẽ tự động khớp với tài khoản của bạn.
+        </p>
+
+        <form id="storeSettingsForm">
+          <h3 style="font-family: var(--font-serif); font-size: 1.2rem; color: var(--admin-accent); margin-bottom: 14px; border-bottom: 1px solid var(--admin-border); padding-bottom: 6px;">
+            1. Thông Tin Thương Hiệu & Địa Chỉ
+          </h3>
+
+          <div class="settings-grid">
+            <div class="settings-group">
+              <label>Tên Tiệm Hoa (Thương hiệu)</label>
+              <input type="text" id="cfgStoreName" class="settings-control" required>
+            </div>
+
+            <div class="settings-group">
+              <label>Số Hotline Đặt Hoa Nhanh</label>
+              <input type="text" id="cfgHotline" class="settings-control" required>
+            </div>
+
+            <div class="settings-group">
+              <label>Slogan Tiếng Pháp</label>
+              <input type="text" id="cfgTaglineFr" class="settings-control" required>
+            </div>
+
+            <div class="settings-group">
+              <label>Slogan Tiếng Anh (Font nghệ thuật)</label>
+              <input type="text" id="cfgTaglineEn" class="settings-control" required>
+            </div>
+
+            <div class="settings-group">
+              <label>Địa Chỉ Cơ Sở 1 (Hà Nội)</label>
+              <input type="text" id="cfgAddressHanoi" class="settings-control" required>
+            </div>
+
+            <div class="settings-group">
+              <label>Địa Chỉ Cơ Sở 2 (Hưng Yên)</label>
+              <input type="text" id="cfgAddressHungYen" class="settings-control" required>
+            </div>
+
+            <div class="settings-group">
+              <label>Link Fanpage Facebook</label>
+              <input type="url" id="cfgFacebook" class="settings-control" required>
+            </div>
+
+            <div class="settings-group">
+              <label>Link Kênh TikTok</label>
+              <input type="url" id="cfgTiktok" class="settings-control" required>
+            </div>
+
+            <div class="settings-group full-width">
+              <label>Nội Dung Banner Thông Báo Đầu Trang (Top Announcement Bar)</label>
+              <input type="text" id="cfgAnnouncement" class="settings-control" required>
+            </div>
+          </div>
+
+          <!-- Section 2: QR Payment Configuration -->
+          <div class="qr-config-section">
+            <h3 style="font-family: var(--font-serif); font-size: 1.25rem; color: var(--admin-primary); margin-bottom: 6px;">
+              2. Cấu Hình Tài Khoản Nhận Tiền & Mã QR (VietQR)
+            </h3>
+            <p style="font-size: 0.85rem; color: var(--admin-muted);">
+              Khi khách hàng chọn thanh toán chuyển khoản, hệ thống sẽ tự sinh mã QR chuyển tiền chính xác đến tài khoản dưới đây:
+            </p>
+
+            <div class="qr-config-preview-layout">
+              <div>
+                <div class="settings-group">
+                  <label>Ngân Hàng Thụ Hưởng *</label>
+                  <select id="cfgBankName" class="settings-control" style="cursor: pointer;">
+                    <option value="Vietcombank">Vietcombank (Ngân hàng Ngoại thương)</option>
+                    <option value="MBBank">MB Bank (Ngân hàng Quân Đội)</option>
+                    <option value="Techcombank">Techcombank (Kỹ Thương)</option>
+                    <option value="ACB">ACB (Á Châu)</option>
+                    <option value="VPBank">VPBank (Việt Nam Thịnh Vượng)</option>
+                    <option value="TPBank">TPBank (Tiên Phong)</option>
+                    <option value="BIDV">BIDV (Đầu tư và Phát triển)</option>
+                    <option value="VietinBank">VietinBank (Công Thương)</option>
+                    <option value="Agribank">Agribank (Nông nghiệp)</option>
+                  </select>
+                </div>
+
+                <div class="settings-group">
+                  <label>Số Tài Khoản Ngân Hàng (STK) *</label>
+                  <input type="text" id="cfgBankAccount" class="settings-control" placeholder="Ví dụ: 0985421398 hoặc 1023456789" required>
+                </div>
+
+                <div class="settings-group">
+                  <label>Tên Chủ Tài Khoản (In hoa không dấu) *</label>
+                  <input type="text" id="cfgAccountHolder" class="settings-control" placeholder="TIEM HOA OWEN FLEUR" required>
+                </div>
+
+                <div class="settings-group">
+                  <label>Tiền tố cú pháp nội dung chuyển khoản</label>
+                  <input type="text" id="cfgTransferPrefix" class="settings-control" placeholder="OWENFLEUR (hệ thống sẽ tự ghép thêm mã đơn)" value="OWENFLEUR">
+                </div>
+
+                <div class="settings-group">
+                  <label>Link Ảnh QR Tĩnh Của Shop (Tùy chọn tải lên / link ảnh sẵn)</label>
+                  <input type="url" id="cfgCustomQrImage" class="settings-control" placeholder="https://... hoặc để trống để tự sinh VietQR chuẩn">
+                </div>
+              </div>
+
+              <!-- Live Preview Card -->
+              <div class="qr-live-preview-card">
+                <div style="font-weight: 700; font-size: 0.85rem; color: var(--admin-primary); text-transform: uppercase;">Xem Trước Mã QR Khách Quét</div>
+                <img id="qrLivePreviewImg" src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=OWENFLEUR_TEST_1000000" alt="VietQR Preview">
+                <div style="font-size: 0.82rem; color: var(--admin-muted);" id="qrLivePreviewInfo">
+                  Ngân hàng: <strong>Vietcombank</strong><br>
+                  STK: <strong>0985 421 398</strong><br>
+                  Chủ TK: <strong>TIEM HOA OWEN FLEUR</strong>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Cloud Database & Supabase Realtime Sync -->
+          <div class="qr-config-section" style="background: #fdfaf6; border-color: #ebdccc; margin-top: 24px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+              <div>
+                <h3 style="font-family: var(--font-serif); font-size: 1.25rem; color: var(--admin-primary); margin: 0;">
+                  ☁️ Kết Nối Cloud Database (Supabase) - Đồng Bộ Realtime Toàn Quốc
+                </h3>
+                <p style="font-size: 0.85rem; color: var(--admin-muted); margin: 4px 0 0 0;">
+                  Đồng bộ đơn hàng giữa điện thoại người mua và máy tính quản trị qua Internet theo thời gian thực (Real-time).
+                </p>
+              </div>
+              <span id="cloudStatusBadge" style="padding: 4px 12px; border-radius: 999px; font-size: 0.8rem; font-weight: 700; background: #fef3c7; color: #92400e; border: 1px solid #f59e0b;">
+                🟡 Đang dùng Offline (LocalStorage)
+              </span>
+            </div>
+
+            <div style="margin-top: 16px; display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+              <div class="settings-group">
+                <label>Supabase Project URL</label>
+                <input type="url" id="cfgSupabaseUrl" class="settings-control" placeholder="https://xyzproject.supabase.co">
+              </div>
+              <div class="settings-group">
+                <label>Supabase Anon Public API Key</label>
+                <input type="password" id="cfgSupabaseKey" class="settings-control" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...">
+              </div>
+            </div>
+
+            <div style="display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap;">
+              <button type="button" class="btn-admin btn-admin-outline" id="btnTestCloudConnection">
+                🔌 Kiểm Tra Kết Nối
+              </button>
+              <button type="button" class="btn-admin btn-admin-primary" id="btnSaveCloudConfig">
+                💾 Lưu Cấu Hình Cloud
+              </button>
+              <button type="button" class="btn-admin btn-admin-outline" id="btnToggleSqlGuide">
+                📋 Xem Mã SQL Tạo Bảng (Chạy 1 lần trên Supabase)
+              </button>
+            </div>
+
+            <div id="sqlGuideContainer" style="display: none; margin-top: 14px; background: #fff; padding: 14px; border-radius: var(--radius-sm); border: 1px solid var(--admin-border);">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <strong style="font-size: 0.85rem; color: var(--admin-primary);">Đoạn mã SQL tạo bảng tự động (Dán vào SQL Editor trên Supabase):</strong>
+                <button type="button" class="btn-admin btn-admin-outline" id="btnCopySql" style="padding: 3px 8px; font-size: 0.75rem;">📋 Copy SQL</button>
+              </div>
+              <textarea id="sqlCodeBlock" readonly style="width: 100%; height: 160px; font-family: monospace; font-size: 0.78rem; padding: 10px; background: #282c34; color: #abb2bf; border-radius: 6px; border: none; resize: vertical;"></textarea>
+            </div>
+          </div>
+
+          <!-- Telegram Push Notification Configuration -->
+          <div class="qr-config-section" style="background: #f0f7ff; border-color: #bfdbfe; margin-top: 24px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+              <div>
+                <h3 style="font-family: var(--font-serif); font-size: 1.25rem; color: #1e40af; margin: 0;">
+                  📲 Chuông Báo Điện Thoại 24/7 Qua Telegram (Miễn Phí)
+                </h3>
+                <p style="font-size: 0.85rem; color: var(--admin-muted); margin: 4px 0 0 0;">
+                  Khi có khách đặt hoa trên website, hệ thống sẽ tự động gửi tin nhắn báo rung đến điện thoại của bạn ngay lập tức!
+                </p>
+              </div>
+              <span style="padding: 4px 12px; border-radius: 999px; font-size: 0.8rem; font-weight: 700; background: #dbeafe; color: #1e40af;">
+                ⚡ Push Alert Real-time
+              </span>
+            </div>
+
+            <div style="margin-top: 16px; display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+              <div class="settings-group">
+                <label>Telegram Bot Token (Tạo nhanh qua @BotFather trên Telegram)</label>
+                <input type="text" id="cfgTelegramBotToken" class="settings-control" placeholder="Ví dụ: 7123456789:AAHxyz...">
+              </div>
+              <div class="settings-group">
+                <label>Telegram Chat ID (Lấy ID cá nhân qua @userinfobot)</label>
+                <input type="text" id="cfgTelegramChatId" class="settings-control" placeholder="Ví dụ: 123456789 hoặc -100xxxx (nếu dùng nhóm)">
+              </div>
+            </div>
+
+            <div style="display: flex; gap: 10px; margin-top: 10px; align-items: center; flex-wrap: wrap;">
+              <button type="button" class="btn-admin btn-admin-outline" id="btnTestTelegramAlert" style="background: #fff;">
+                🔔 Bắn Thử 1 Tin Nhắn Test Về Điện Thoại
+              </button>
+              <span style="font-size: 0.8rem; color: var(--admin-muted);">
+                💡 Chỉ cần chat <code>/start</code> với Bot của bạn trước để cấp quyền nhận tin nhắn.
+              </span>
+            </div>
+          </div>
+
+          <div style="margin-top: 24px;">
+            <button type="submit" class="btn-admin btn-admin-primary" style="padding: 14px 32px; font-size: 1.05rem;">
+              💾 Lưu Tất Cả Cài Đặt & Đồng Bộ Sang Portal Người Mua
+            </button>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <!-- ================= VIEW 5: ADMIN ACCOUNTS MANAGEMENT ================= -->
+    <section class="admin-view-pane" id="adminsView">
+      <div class="products-admin-card">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 14px;">
+          <div>
+            <h2 style="font-family: var(--font-serif); font-size: 1.5rem; color: var(--admin-primary);">
+              🛡️ Danh Sách Quản Trị Viên & Nhân Sự Tiệm Hoa
+            </h2>
+            <p style="color: var(--admin-muted); font-size: 0.88rem;">
+              Phân quyền và cấp tài khoản riêng cho từng nhân viên (Chủ tiệm, Florist cắm hoa, Nhân viên bán hàng & CSKH) để vận hành độc lập.
+            </p>
+          </div>
+          <button class="btn-admin btn-admin-primary" id="openAddAdminModalBtn">
+            ➕ Cấp Tài Khoản Mới
+          </button>
+        </div>
+
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>Nhân Sự (Avatar & Tên)</th>
+              <th>Tên Đăng Nhập (Username)</th>
+              <th>Mật Khẩu</th>
+              <th>Vai Trò & Quyền Hạn</th>
+              <th>Ngày Cấp</th>
+              <th>Thao Tác</th>
+            </tr>
+          </thead>
+          <tbody id="adminsTableBody">
+            <!-- Injected via JavaScript -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ================= MODAL: SỬA / THÊM MỚI SẢN PHẨM ================= -->
+  <div class="admin-modal-overlay" id="productEditModal">
+    <div class="admin-modal-box">
+      <button class="admin-modal-close" id="productEditModalClose">&times;</button>
+      <div style="padding: 24px 28px; border-bottom: 1px solid var(--admin-border);">
+        <h2 id="productModalTitle" style="font-family: var(--font-serif); font-size: 1.5rem; color: var(--admin-primary);">
+          Chỉnh Sửa Mẫu Hoa
+        </h2>
+        <p style="color: var(--admin-muted); font-size: 0.85rem;">Thông tin cập nhật sẽ được hiển thị ngay lập tức lên website khách hàng.</p>
+      </div>
+
+      <form id="productEditForm">
+        <input type="hidden" id="prodEditId">
+
+        <div class="product-modal-grid">
+          <!-- Col 1 -->
+          <div>
+            <div class="settings-group">
+              <label>Tên Mẫu Hoa *</label>
+              <input type="text" id="prodEditName" class="settings-control" required placeholder="Ví dụ: Bó Hoa 'Ánh Mắt Hoàng Hôn'">
+            </div>
+
+            <div class="settings-group">
+              <label>Thể Loại Hoa *</label>
+              <select id="prodEditCategory" class="settings-control" required>
+                <option value="love">💖 Tình Yêu & Kỷ Niệm</option>
+                <option value="birthday">🎂 Sinh Nhật Rực Rỡ</option>
+                <option value="opening">🎉 Khai Trương - Chúc Mừng</option>
+                <option value="wedding">💍 Hoa Cưới Cầm Tay</option>
+                <option value="box">🎁 Giỏ & Hộp Hoa Cao Cấp</option>
+              </select>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+              <div class="settings-group">
+                <label>Giá Bán (VNĐ) *</label>
+                <input type="number" id="prodEditPrice" class="settings-control" required min="10000" step="10000" placeholder="850000">
+              </div>
+              <div class="settings-group">
+                <label>Giá Gốc (Trước giảm)</label>
+                <input type="number" id="prodEditOriginalPrice" class="settings-control" min="0" step="10000" placeholder="1050000">
+              </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+              <div class="settings-group">
+                <label>Tone Màu Hoa *</label>
+                <input type="text" id="prodEditTone" class="settings-control" required placeholder="Hồng Pastel & Trắng Kem">
+              </div>
+              <div class="settings-group">
+                <label>Nhãn / Tag Nổi Bật</label>
+                <input type="text" id="prodEditTag" class="settings-control" placeholder="Bán Chạy Nhất / Mới Về / Sale 20%">
+              </div>
+            </div>
+
+            <div class="settings-group">
+              <label>Loài Hoa Sử Dụng (Cách nhau bằng dấu phẩy)</label>
+              <input type="text" id="prodEditFlowersIncluded" class="settings-control" placeholder="Hồng Ohara Sáp, Mẫu Đơn, Baby Khô">
+            </div>
+          </div>
+
+          <!-- Col 2: Image & Descriptions -->
+          <div>
+            <div class="settings-group">
+              <label>Ảnh Mẫu Hoa *</label>
+              <div class="image-upload-toggle-tabs">
+                <button type="button" class="img-tab-btn active" id="tabUploadFile">📁 Tải Ảnh Từ Máy Tính / Điện Thoại</button>
+                <button type="button" class="img-tab-btn" id="tabEnterUrl">🔗 Dán Link Ảnh (URL)</button>
+              </div>
+
+              <!-- Option 1: File Upload -->
+              <div id="fileUploadContainer" style="margin-top: 6px;">
+                <label class="custom-file-upload-box" for="prodEditImageFile">
+                  <span class="upload-icon">📷</span>
+                  <span class="upload-text" id="uploadFileText">Nhấn để chọn ảnh từ máy tính</span>
+                  <span class="upload-hint">Hỗ trợ JPG, PNG, WEBP (Lưu trực tiếp vào website)</span>
+                  <input type="file" id="prodEditImageFile" accept="image/*" style="display: none;">
+                </label>
+              </div>
+
+              <!-- Option 2: URL Input -->
+              <div id="urlInputContainer" style="display: none; margin-top: 6px;">
+                <input type="url" id="prodEditImage" class="settings-control" placeholder="https://images.unsplash.com/...">
+              </div>
+
+              <!-- Preview Box -->
+              <div class="product-image-preview-box">
+                <img id="prodImagePreview" src="https://images.unsplash.com/photo-1561181286-d3fee7d55364?auto=format&fit=crop&w=400&q=80" alt="Xem trước ảnh hoa">
+              </div>
+            </div>
+
+            <div class="settings-group">
+              <label>Mô Tả Sản Phẩm *</label>
+              <textarea id="prodEditDesc" class="settings-control" rows="2" required placeholder="Mô tả vẻ đẹp, phong cách cắm..."></textarea>
+            </div>
+
+            <div class="settings-group">
+              <label>Ý Nghĩa Loài Hoa</label>
+              <textarea id="prodEditMeaning" class="settings-control" rows="2" placeholder="Tượng trưng cho tình cảm chân thành..."></textarea>
+            </div>
+
+            <div class="settings-group">
+              <label>Đặc Tính & Cách Bảo Quản Hoa Sáp</label>
+              <input type="text" id="prodEditCareGuide" class="settings-control" placeholder="Để nơi khô ráo thoáng mát, tránh nước và ánh nắng gắt. Bền đẹp 3 - 5 năm.">
+            </div>
+          </div>
+        </div>
+
+        <div style="padding: 16px 28px; background: var(--admin-bg); display: flex; justify-content: flex-end; gap: 12px; border-top: 1px solid var(--admin-border);">
+          <button type="button" class="btn-admin btn-admin-outline" id="cancelProductEditBtn">Hủy</button>
+          <button type="submit" class="btn-admin btn-admin-primary">💾 Lưu Sản Phẩm</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ================= MODAL: TẠO ĐƠN HÀNG MỚI (THỦ CÔNG / QUẦY / HOTLINE) ================= -->
+  <div class="admin-modal-overlay" id="manualOrderModal">
+    <div class="admin-modal-box" style="max-width: 880px;">
+      <button class="admin-modal-close" id="manualOrderModalClose">&times;</button>
+      <div style="padding: 22px 28px; border-bottom: 1px solid var(--admin-border); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+        <div>
+          <h2 style="font-family: var(--font-serif); font-size: 1.5rem; color: var(--admin-primary); margin: 0;">
+            ✨ Tạo Đơn Hàng Mới (Thủ Công / Hotline / Quầy)
+          </h2>
+          <p style="color: var(--admin-muted); font-size: 0.85rem; margin: 2px 0 0 0;">
+            Lên đơn nhanh cho khách gọi Hotline, chat Fanpage Facebook, TikTok, Zalo hoặc mua tại tiệm.
+          </p>
+        </div>
+        <div style="background: #edf7f2; border: 1px solid #c2e2d0; color: #1e5e3a; font-size: 0.82rem; font-weight: 700; padding: 6px 14px; border-radius: 999px;">
+          👤 Người lập đơn: <span id="currentAdminNameBadge">Admin</span>
+        </div>
+      </div>
+
+      <form id="manualOrderForm" style="padding: 24px 28px;">
+        <div style="display: grid; grid-template-columns: 1.1fr 1fr; gap: 24px;">
+          <!-- Left Column: Customer & Delivery Info -->
+          <div>
+            <h4 style="font-size: 0.95rem; font-weight: 700; color: var(--admin-primary); margin-bottom: 12px; border-bottom: 1px solid var(--admin-border); padding-bottom: 6px;">
+              1. Thông Tin Khách Hàng & Nơi Giao
+            </h4>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+              <div class="settings-group">
+                <label>Tên Người Nhận Hoa *</label>
+                <input type="text" id="moRecipientName" class="settings-control" required placeholder="Ví dụ: Chị Lan Anh">
+              </div>
+              <div class="settings-group">
+                <label>SĐT Người Nhận *</label>
+                <input type="tel" id="moRecipientPhone" class="settings-control" required placeholder="0912 345 678">
+              </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+              <div class="settings-group">
+                <label>SĐT Người Đặt (Báo đơn)</label>
+                <input type="tel" id="moSenderPhone" class="settings-control" placeholder="Để trống nếu là người nhận">
+              </div>
+              <div class="settings-group">
+                <label>Kênh Tiếp Nhận Đơn</label>
+                <select id="moSource" class="settings-control">
+                  <option value="store">🏬 Khách Mua Tại Quầy</option>
+                  <option value="hotline">📞 Hotline / Gọi Điện Thoại</option>
+                  <option value="facebook">💬 Fanpage Facebook</option>
+                  <option value="tiktok">🎵 TikTok Shop / DM TikTok</option>
+                  <option value="zalo">💬 Zalo OA / Zalo Cá Nhân</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="settings-group">
+              <label>Địa Chỉ Giao Hoa Chi Tiết *</label>
+              <input type="text" id="moAddress" class="settings-control" required placeholder="Số nhà, đường phố, tòa nhà... hoặc ghi 'Nhận tại quầy'">
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1.2fr; gap: 10px;">
+              <div class="settings-group">
+                <label>Ngày Giao Hẹn *</label>
+                <input type="date" id="moDeliveryDate" class="settings-control" required>
+              </div>
+              <div class="settings-group">
+                <label>Khung Giờ Giao</label>
+                <select id="moDeliveryTime" class="settings-control">
+                  <option value="asap">⚡ Hỏa Tốc Trong 2 Giờ (Gấp)</option>
+                  <option value="morning">Buổi Sáng (08:00 - 11:30)</option>
+                  <option value="noon">Buổi Trưa (11:30 - 14:00)</option>
+                  <option value="afternoon" selected>Buổi Chiều (14:00 - 17:30)</option>
+                  <option value="evening">Buổi Tối (17:30 - 20:30)</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="settings-group" style="background: #fff8f8; border: 1px dashed var(--admin-urgent); padding: 10px 14px; border-radius: var(--radius-sm); margin-top: 6px;">
+              <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; color: var(--admin-urgent); font-weight: 700; margin: 0;">
+                <input type="checkbox" id="moIsUrgent" style="width: 18px; height: 18px;">
+                <span>⚡ Đánh dấu Đơn Hỏa Tốc / Ưu Tiên Cắm Gấp</span>
+              </label>
+            </div>
+
+            <div class="settings-group" style="margin-top: 12px;">
+              <label>Nội Dung Ghi Thiệp Chúc Mừng</label>
+              <textarea id="moCardMessage" class="settings-control" rows="2" placeholder="Ví dụ: Chúc mừng sinh nhật em gái yêu quý! Chúc em luôn tươi trẻ và hạnh phúc!"></textarea>
+            </div>
+
+            <div class="settings-group">
+              <label>Ghi Chú Cho Florist / Thợ Cắm Hoa</label>
+              <input type="text" id="moFloristNotes" class="settings-control" placeholder="Ghi chú tone nơ, thời điểm gọi trước khi giao...">
+            </div>
+          </div>
+
+          <!-- Right Column: Products in Order & Payment -->
+          <div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid var(--admin-border); padding-bottom: 6px;">
+              <h4 style="font-size: 0.95rem; font-weight: 700; color: var(--admin-primary); margin: 0;">
+                2. Mẫu Hoa Trong Đơn
+              </h4>
+              <button type="button" class="btn-admin btn-admin-outline" id="moAddItemBtn" style="padding: 4px 10px; font-size: 0.78rem;">
+                + Thêm Mẫu Hoa
+              </button>
+            </div>
+
+            <div id="moItemsList" style="display: flex; flex-direction: column; gap: 8px; max-height: 230px; overflow-y: auto; padding-right: 4px; margin-bottom: 14px;">
+              <!-- Dynamic Rows -->
+            </div>
+
+            <div style="background: var(--admin-bg); border-radius: var(--radius-sm); padding: 12px 14px; border: 1px solid var(--admin-border); margin-bottom: 14px;">
+              <div style="display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 0.88rem;">
+                <span>Tạm tính tiền hoa:</span>
+                <strong id="moSubtotalDisplay">0₫</strong>
+              </div>
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-size: 0.88rem;">
+                <span>Phí giao hàng:</span>
+                <input type="number" id="moShippingFee" class="settings-control" value="0" step="5000" min="0" style="width: 110px; text-align: right; padding: 4px 8px;">
+              </div>
+              <div style="display: flex; justify-content: space-between; border-top: 1px dashed var(--admin-border); padding-top: 8px; font-size: 1.05rem; font-weight: 800; color: var(--admin-primary);">
+                <span>TỔNG ĐƠN HÀNG:</span>
+                <span id="moTotalDisplay" style="color: var(--admin-urgent);">0₫</span>
+              </div>
+            </div>
+
+            <h4 style="font-size: 0.95rem; font-weight: 700; color: var(--admin-primary); margin-bottom: 12px; border-bottom: 1px solid var(--admin-border); padding-bottom: 6px;">
+              3. Thanh Toán & Trạng Thái
+            </h4>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+              <div class="settings-group">
+                <label>Phương Thức TT</label>
+                <select id="moPaymentMethod" class="settings-control">
+                  <option value="cod">Tiền Mặt / COD</option>
+                  <option value="qr">Chuyển Khoản VietQR</option>
+                  <option value="bank">Chuyển Khoản Ngân Hàng</option>
+                </select>
+              </div>
+              <div class="settings-group">
+                <label>Tình Trạng TT</label>
+                <select id="moPaymentStatus" class="settings-control">
+                  <option value="Đã thanh toán đủ">✅ Đã Thanh Toán Đủ</option>
+                  <option value="Đã cọc 50%">⏳ Đã Cọc 50%</option>
+                  <option value="Thu tiền khi giao (COD)">💵 Chưa TT (Thu COD)</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="settings-group">
+              <label>Trạng Thái Khởi Tạo</label>
+              <select id="moInitialStatus" class="settings-control">
+                <option value="crafting">✂️ Đang Cắm Hoa (Crafting) - Vào việc ngay</option>
+                <option value="pending">⏳ Chờ Xác Nhận (Pending)</option>
+                <option value="photo_sent">📸 Đã Gửi Ảnh Duyệt</option>
+                <option value="delivering">🚚 Đang Giao Hàng</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div style="padding-top: 18px; border-top: 1px solid var(--admin-border); margin-top: 18px; display: flex; justify-content: flex-end; gap: 12px;">
+          <button type="button" class="btn-admin btn-admin-outline" id="moCancelBtn">Hủy Bỏ</button>
+          <button type="submit" class="btn-admin btn-admin-primary" style="padding: 12px 28px; font-size: 1rem;">
+            ✨ Hoàn Tất Tạo Đơn & Đưa Vào Vận Hành
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ================= MODAL: THÊM TÀI KHOẢN ADMIN MỚI ================= -->
+  <div class="admin-modal-overlay" id="addAdminModal">
+    <div class="admin-modal-box" style="max-width: 500px;">
+      <button class="admin-modal-close" id="addAdminModalClose">&times;</button>
+      <div style="padding: 22px 26px; border-bottom: 1px solid var(--admin-border);">
+        <h2 style="font-family: var(--font-serif); font-size: 1.4rem; color: var(--admin-primary); margin: 0;">
+          ➕ Cấp Tài Khoản Quản Trị / Nhân Viên Mới
+        </h2>
+        <p style="color: var(--admin-muted); font-size: 0.85rem; margin: 4px 0 0 0;">
+          Tạo tài khoản đăng nhập riêng để nhân sự phụ trách đơn hàng và vận hành tiệm.
+        </p>
+      </div>
+
+      <form id="addAdminForm" style="padding: 24px 26px;">
+        <div class="settings-group">
+          <label>Họ Và Tên Nhân Sự *</label>
+          <input type="text" id="newAdminName" class="settings-control" required placeholder="Ví dụ: Hoàng Thu Thảo">
+        </div>
+
+        <div class="settings-group">
+          <label>Tên Đăng Nhập (Username) *</label>
+          <input type="text" id="newAdminUsername" class="settings-control" required placeholder="Ví dụ: florist_thao" pattern="[a-zA-Z0-9_]{3,20}">
+          <small style="color: var(--admin-muted); font-size: 0.75rem;">Viết liền không dấu, từ 3 - 20 ký tự.</small>
+        </div>
+
+        <div class="settings-group">
+          <label>Mật Khẩu Đăng Nhập *</label>
+          <input type="password" id="newAdminPassword" class="settings-control" required placeholder="Tối thiểu 6 ký tự" minlength="6">
+        </div>
+
+        <div class="settings-group">
+          <label>Vai Trò / Bộ Phận *</label>
+          <select id="newAdminRole" class="settings-control" required>
+            <option value="Quản lý trưởng">👑 Quản Lý Trưởng / Chủ Tiệm</option>
+            <option value="Florist cắm hoa" selected>🌸 Florist Nghệ Thuật (Cắm hoa & duyệt mẫu)</option>
+            <option value="Nhân viên CSKH & Bán hàng">🎧 Nhân Viên CSKH & Bán Hàng (Trực đơn hotline, chat)</option>
+            <option value="Shipper giao hàng">🚚 Shipper Giao Hàng</option>
+          </select>
+        </div>
+
+        <div style="padding-top: 16px; border-top: 1px solid var(--admin-border); margin-top: 16px; display: flex; justify-content: flex-end; gap: 10px;">
+          <button type="button" class="btn-admin btn-admin-outline" id="addAdminCancelBtn">Hủy</button>
+          <button type="submit" class="btn-admin btn-admin-primary">
+            💾 Tạo Tài Khoản
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Printable Delivery Slip Modal -->
+  <div class="admin-modal-overlay" id="printSlipModal">
+    <div class="admin-modal-box">
+      <button class="admin-modal-close" id="printSlipModalClose">&times;</button>
+      <div id="printSlipModalContent">
+        <!-- Injected via JavaScript -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="adminToastContainer" style="position: fixed; bottom: 24px; right: 24px; z-index: 3000; display: flex; flex-direction: column; gap: 10px;"></div>
+
+  <!-- Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/cloud.js"></script>
+  <script src="js/data.js"></script>
+  <script src="js/admin.js"></script>
+</body>
+</html>
