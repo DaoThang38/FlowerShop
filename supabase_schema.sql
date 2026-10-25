@@ -44,3 +44,7 @@ CREATE POLICY "Cho phép đọc đơn hàng (Select)" ON public.orders FOR SELEC
 -- Cho phép chủ tiệm cập nhật trạng thái đơn
 DROP POLICY IF EXISTS "Cho phép cập nhật trạng thái đơn (Update)" ON public.orders;
 CREATE POLICY "Cho phép cập nhật trạng thái đơn (Update)" ON public.orders FOR UPDATE USING (true);
+
+-- Cho phép chủ tiệm xóa đơn hàng vĩnh viễn (Delete)
+DROP POLICY IF EXISTS "Cho phép xóa đơn hàng (Delete)" ON public.orders FOR DELETE USING (true);
+CREATE POLICY "Cho phép xóa đơn hàng (Delete)" ON public.orders FOR DELETE USING (true);

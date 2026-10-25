@@ -53,12 +53,22 @@ const OwenCloud = {
   client: null,
   configKey: 'owenfleur_cloud_config',
 
+  // Embedded project credentials for public storefront & cross-device sync
+  defaultConfig: {
+    supabaseUrl: 'https://qevrsfwfibjbmjuucdjv.supabase.co',
+    supabaseKey: 'sb_publishable_IdN2sVw_ALs7XWcNsjPwaA__BZJRdGP',
+    enabled: true
+  },
+
   getConfig() {
     try {
       const cfg = JSON.parse(localStorage.getItem(this.configKey));
-      return cfg || { supabaseUrl: '', supabaseKey: '', enabled: false };
+      if (cfg && cfg.supabaseUrl && cfg.supabaseKey && cfg.enabled) {
+        return cfg;
+      }
+      return (this.defaultConfig.supabaseUrl && this.defaultConfig.supabaseKey) ? this.defaultConfig : (cfg || { supabaseUrl: '', supabaseKey: '', enabled: false });
     } catch (e) {
-      return { supabaseUrl: '', supabaseKey: '', enabled: false };
+      return (this.defaultConfig.supabaseUrl && this.defaultConfig.supabaseKey) ? this.defaultConfig : { supabaseUrl: '', supabaseKey: '', enabled: false };
     }
   },
 

@@ -1943,8 +1943,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Load current config
     const curCfg = OwenCloud.getConfig();
-    if (cfgSupabaseUrl) cfgSupabaseUrl.value = curCfg.url || '';
-    if (cfgSupabaseKey) cfgSupabaseKey.value = curCfg.key || '';
+    const activeUrl = curCfg.supabaseUrl || curCfg.url || '';
+    const activeKey = curCfg.supabaseKey || curCfg.key || '';
+    if (cfgSupabaseUrl) cfgSupabaseUrl.value = activeUrl;
+    if (cfgSupabaseKey) cfgSupabaseKey.value = activeKey;
     if (sqlCodeBlock) sqlCodeBlock.value = OwenCloud.getSchemaSQL();
 
     function updateBadge(status, text) {
@@ -1964,8 +1966,8 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
 
-    if (curCfg.url && curCfg.key) {
-      updateBadge('connected', 'Đã lưu cấu hình Supabase Cloud');
+    if (activeUrl && activeKey) {
+      updateBadge('connected', 'Đang Trực Tuyến & Đồng Bộ (Supabase Cloud)');
     } else {
       updateBadge('disconnected', 'Đang dùng LocalStorage (Chưa kết nối Cloud)');
     }
@@ -2038,7 +2040,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Load initial orders from Cloud if configured
-    if (curCfg.url && curCfg.key) {
+    if (activeUrl && activeKey) {
       OwenCloud.fetchOrders().then(cloudOrders => {
         if (cloudOrders && cloudOrders.length > 0) {
           state.orders = cloudOrders;
