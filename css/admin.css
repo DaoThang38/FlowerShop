@@ -1046,6 +1046,144 @@ body {
   background: #e0f2fe;
   color: #075985;
   border: 1px solid #38bdf8;
+}/* ================= Custom Bouquet Builder Admin Config ================= */
+.builder-fee-card {
+  background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+  border: 1px solid #86efac;
+  border-radius: var(--radius-md);
+  padding: 18px 24px;
+  margin-bottom: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
 }
 
+.builder-fee-info h4 {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-size: 1.15rem;
+  color: #166534;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.builder-fee-info p {
+  margin: 4px 0 0 0;
+  font-size: 0.83rem;
+  color: #15803d;
+}
+
+.builder-fee-action {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.builder-fee-input {
+  width: 140px;
+  padding: 10px 14px;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #14532d;
+  background: #ffffff;
+  border: 1.5px solid #86efac;
+  border-radius: var(--radius-sm);
+  text-align: right;
+  outline: none;
+}
+
+.builder-fee-input:focus {
+  border-color: #16a34a;
+  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.2);
+}
+
+.builder-subtabs {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  border-bottom: 2px solid var(--admin-border);
+  padding-bottom: 12px;
+}
+
+.builder-subtab-btn {
+  padding: 10px 18px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--admin-border);
+  background: var(--admin-card);
+  color: var(--admin-muted);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s ease;
+}
+
+.builder-subtab-btn:hover {
+  background: var(--admin-bg);
+  color: var(--admin-primary);
+  border-color: #cbd5e1;
+}
+
+.builder-subtab-btn.active {
+  background: var(--admin-primary);
+  color: #ffffff;
+  border-color: var(--admin-primary);
+  box-shadow: 0 4px 12px rgba(23, 47, 35, 0.15);
+}
+
+.builder-subtab-badge {
+  background: rgba(0, 0, 0, 0.08);
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.builder-subtab-btn.active .builder-subtab-badge {
+  background: rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+}
+
+.builder-visual-chip {
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--admin-bg);
+  border: 1px solid var(--admin-border);
+  font-size: 1.5rem;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.builder-visual-chip img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.builder-ribbon-swatch {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+}
+
+.builder-swatch-circle {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid #ffffff;
+  box-shadow: 0 0 0 1px #cbd5e1;
+  display: inline-block;
+  flex-shrink: 0;
+}
 

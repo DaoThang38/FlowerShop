@@ -25,10 +25,10 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Custom Bouquet Builder State
     customBouquet: {
-      mainFlower: FLOWER_DATA.customBouquetOptions.mainFlowers[0],
-      accentFlower: FLOWER_DATA.customBouquetOptions.accentFlowers[0],
-      wrapper: FLOWER_DATA.customBouquetOptions.wrappers[0],
-      ribbon: FLOWER_DATA.customBouquetOptions.ribbons[0],
+      mainFlower: null,
+      accentFlower: null,
+      wrapper: null,
+      ribbon: null,
       cardMessage: ''
     }
   };
@@ -81,6 +81,9 @@ document.addEventListener('DOMContentLoaded', () => {
       } catch (err) {}
     } else if (e.key === 'owenfleur_store_settings') {
       applyStoredSettingsToCustomerPortal();
+    } else if (e.key === 'owenfleur_builder_options') {
+      initCustomBouquetBuilder();
+      console.log('🎨 Đã đồng bộ cấu hình Tự Phối Hoa từ Admin Portal!');
     }
   });
 
@@ -537,48 +540,103 @@ document.addEventListener('DOMContentLoaded', () => {
   // --------------------------------------------------------------------------
   // 5. Custom Bouquet Builder Logic
   // --------------------------------------------------------------------------
+  function getCustomBouquetOptions() {
+    try {
+      const stored = localStorage.getItem('owenfleur_builder_options');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed && Array.isArray(parsed.mainFlowers) && parsed.mainFlowers.length > 0) {
+          return parsed;
+        }
+      }
+    } catch (e) {}
+    return {
+      mainFlowers: (typeof FLOWER_DATA !== 'undefined' && FLOWER_DATA.customBouquetOptions) ? [...FLOWER_DATA.customBouquetOptions.mainFlowers] : [],
+      accentFlowers: (typeof FLOWER_DATA !== 'undefined' && FLOWER_DATA.customBouquetOptions) ? [...FLOWER_DATA.customBouquetOptions.accentFlowers] : [],
+      wrappers: (typeof FLOWER_DATA !== 'undefined' && FLOWER_DATA.customBouquetOptions) ? [...FLOWER_DATA.customBouquetOptions.wrappers] : [],
+      ribbons: (typeof FLOWER_DATA !== 'undefined' && FLOWER_DATA.customBouquetOptions) ? [...FLOWER_DATA.customBouquetOptions.ribbons] : [],
+      baseCraftFee: 50000
+    };
+  }
+
   function initCustomBouquetBuilder() {
-    const opts = FLOWER_DATA.customBouquetOptions;
+    const opts = getCustomBouquetOptions();
+
+    // Ensure selections exist in fresh options
+    if (!state.customBouquet.mainFlower || !opts.mainFlowers.some(f => f.id === state.customBouquet.mainFlower.id)) {
+      state.customBouquet.mainFlower = opts.mainFlowers[0] || { id: 'default', name: 'Hoa Sáp', price: 0, img: '🌸' };
+    }
+    if (!state.customBouquet.accentFlower || !opts.accentFlowers.some(a => a.id === state.customBouquet.accentFlower.id)) {
+      state.customBouquet.accentFlower = opts.accentFlowers[0] || { id: 'none', name: 'Không phụ kiện', price: 0 };
+    }
+    if (!state.customBouquet.wrapper || !opts.wrappers.some(w => w.id === state.customBouquet.wrapper.id)) {
+      state.customBouquet.wrapper = opts.wrappers[0] || { id: 'default_wrap', name: 'Giấy chuẩn', price: 0, preview: '🎀' };
+    }
+    if (!state.customBouquet.ribbon || !opts.ribbons.some(r => r.id === state.customBouquet.ribbon.id)) {
+      state.customBouquet.ribbon = opts.ribbons[0] || { id: 'default_ribbon', name: 'Ruy băng pastel', code: '#F4A6B8' };
+    }
 
     // Render Step 1: Main Flowers
     const mainFlowerContainer = document.getElementById('builderMainFlowers');
-    mainFlowerContainer.innerHTML = opts.mainFlowers.map(f => `
-      <div class="builder-choice-item ${f.id === state.customBouquet.mainFlower.id ? 'selected' : ''}" data-type="main" data-id="${f.id}">
-        <div style="font-size: 1.8rem; margin-bottom: 8px;">${f.img}</div>
-        <div class="choice-name">${f.name}</div>
-        <div class="choice-desc">${f.desc}</div>
-        <div class="choice-price">+ ${formatCurrency(f.price)}</div>
-      </div>
-    `).join('');
+    if (mainFlowerContainer) {
+      mainFlowerContainer.innerHTML = opts.mainFlowers.map(f => {
+        const isImg = f.img && (f.img.startsWith('http') || f.img.startsWith('data:'));
+        const visualHtml = isImg
+          ? `<img src="${f.img}" alt="${f.name}" style="width: 48px; height: 48px; object-fit: cover; border-radius: 8px; margin-bottom: 8px;" />`
+          : `<div style="font-size: 1.8rem; margin-bottom: 8px;">${f.img || '🌸'}</div>`;
+
+        return `
+          <div class="builder-choice-item ${f.id === state.customBouquet.mainFlower.id ? 'selected' : ''}" data-type="main" data-id="${f.id}">
+            ${visualHtml}
+            <div class="choice-name">${f.name}</div>
+            <div class="choice-desc">${f.desc || ''}</div>
+            <div class="choice-price">+ ${formatCurrency(f.price)}</div>
+          </div>
+        `;
+      }).join('');
+    }
 
     // Render Step 2: Accent Flowers
     const accentContainer = document.getElementById('builderAccentFlowers');
-    accentContainer.innerHTML = opts.accentFlowers.map(a => `
-      <div class="builder-choice-item ${a.id === state.customBouquet.accentFlower.id ? 'selected' : ''}" data-type="accent" data-id="${a.id}">
-        <div class="choice-name">${a.name}</div>
-        <div class="choice-desc">${a.desc}</div>
-        <div class="choice-price">${a.price > 0 ? '+ ' + formatCurrency(a.price) : 'Miễn phí'}</div>
-      </div>
-    `).join('');
+    if (accentContainer) {
+      accentContainer.innerHTML = opts.accentFlowers.map(a => `
+        <div class="builder-choice-item ${a.id === state.customBouquet.accentFlower.id ? 'selected' : ''}" data-type="accent" data-id="${a.id}">
+          <div class="choice-name">${a.name}</div>
+          <div class="choice-desc">${a.desc || ''}</div>
+          <div class="choice-price">${a.price > 0 ? '+ ' + formatCurrency(a.price) : 'Miễn phí'}</div>
+        </div>
+      `).join('');
+    }
 
     // Render Step 3: Wrappers
     const wrapperContainer = document.getElementById('builderWrappers');
-    wrapperContainer.innerHTML = opts.wrappers.map(w => `
-      <div class="builder-choice-item ${w.id === state.customBouquet.wrapper.id ? 'selected' : ''}" data-type="wrapper" data-id="${w.id}">
-        <div style="font-size: 1.6rem; margin-bottom: 6px;">${w.preview}</div>
-        <div class="choice-name">${w.name}</div>
-        <div class="choice-price">+ ${formatCurrency(w.price)}</div>
-      </div>
-    `).join('');
+    if (wrapperContainer) {
+      wrapperContainer.innerHTML = opts.wrappers.map(w => {
+        const isImg = w.preview && (w.preview.startsWith('http') || w.preview.startsWith('data:'));
+        const visualHtml = isImg
+          ? `<img src="${w.preview}" alt="${w.name}" style="width: 44px; height: 44px; object-fit: cover; border-radius: 8px; margin-bottom: 6px;" />`
+          : `<div style="font-size: 1.6rem; margin-bottom: 6px;">${w.preview || '🎀'}</div>`;
+
+        return `
+          <div class="builder-choice-item ${w.id === state.customBouquet.wrapper.id ? 'selected' : ''}" data-type="wrapper" data-id="${w.id}">
+            ${visualHtml}
+            <div class="choice-name">${w.name}</div>
+            <div class="choice-price">+ ${formatCurrency(w.price)}</div>
+          </div>
+        `;
+      }).join('');
+    }
 
     // Render Step 4: Ribbons
     const ribbonContainer = document.getElementById('builderRibbons');
-    ribbonContainer.innerHTML = opts.ribbons.map(r => `
-      <div class="ribbon-pill ${r.id === state.customBouquet.ribbon.id ? 'selected' : ''}" data-type="ribbon" data-id="${r.id}">
-        <span class="ribbon-color-circle" style="background-color: ${r.code};"></span>
-        <span>${r.name}</span>
-      </div>
-    `).join('');
+    if (ribbonContainer) {
+      ribbonContainer.innerHTML = opts.ribbons.map(r => `
+        <div class="ribbon-pill ${r.id === state.customBouquet.ribbon.id ? 'selected' : ''}" data-type="ribbon" data-id="${r.id}">
+          <span class="ribbon-color-circle" style="background-color: ${r.code || '#F4A6B8'};"></span>
+          <span>${r.name}</span>
+        </div>
+      `).join('');
+    }
 
     // Choice Click Listeners
     document.querySelectorAll('.builder-choice-item, .ribbon-pill').forEach(el => {
@@ -587,20 +645,32 @@ document.addEventListener('DOMContentLoaded', () => {
         const id = el.getAttribute('data-id');
 
         if (type === 'main') {
-          state.customBouquet.mainFlower = opts.mainFlowers.find(f => f.id === id);
-          mainFlowerContainer.querySelectorAll('.builder-choice-item').forEach(b => b.classList.remove('selected'));
+          const found = opts.mainFlowers.find(f => f.id === id);
+          if (found) state.customBouquet.mainFlower = found;
+          if (mainFlowerContainer) {
+            mainFlowerContainer.querySelectorAll('.builder-choice-item').forEach(b => b.classList.remove('selected'));
+          }
           el.classList.add('selected');
         } else if (type === 'accent') {
-          state.customBouquet.accentFlower = opts.accentFlowers.find(a => a.id === id);
-          accentContainer.querySelectorAll('.builder-choice-item').forEach(b => b.classList.remove('selected'));
+          const found = opts.accentFlowers.find(a => a.id === id);
+          if (found) state.customBouquet.accentFlower = found;
+          if (accentContainer) {
+            accentContainer.querySelectorAll('.builder-choice-item').forEach(b => b.classList.remove('selected'));
+          }
           el.classList.add('selected');
         } else if (type === 'wrapper') {
-          state.customBouquet.wrapper = opts.wrappers.find(w => w.id === id);
-          wrapperContainer.querySelectorAll('.builder-choice-item').forEach(b => b.classList.remove('selected'));
+          const found = opts.wrappers.find(w => w.id === id);
+          if (found) state.customBouquet.wrapper = found;
+          if (wrapperContainer) {
+            wrapperContainer.querySelectorAll('.builder-choice-item').forEach(b => b.classList.remove('selected'));
+          }
           el.classList.add('selected');
         } else if (type === 'ribbon') {
-          state.customBouquet.ribbon = opts.ribbons.find(r => r.id === id);
-          ribbonContainer.querySelectorAll('.ribbon-pill').forEach(b => b.classList.remove('selected'));
+          const found = opts.ribbons.find(r => r.id === id);
+          if (found) state.customBouquet.ribbon = found;
+          if (ribbonContainer) {
+            ribbonContainer.querySelectorAll('.ribbon-pill').forEach(b => b.classList.remove('selected'));
+          }
           el.classList.add('selected');
         }
 
@@ -609,20 +679,26 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     const cardMessageInput = document.getElementById('customCardMessage');
-    if (cardMessageInput) {
+    if (cardMessageInput && !cardMessageInput.dataset.bound) {
+      cardMessageInput.dataset.bound = 'true';
       cardMessageInput.addEventListener('input', (e) => {
         state.customBouquet.cardMessage = e.target.value;
       });
     }
 
     const addCustomToCartBtn = document.getElementById('addCustomToCartBtn');
-    if (addCustomToCartBtn) {
+    if (addCustomToCartBtn && !addCustomToCartBtn.dataset.bound) {
+      addCustomToCartBtn.dataset.bound = 'true';
       addCustomToCartBtn.addEventListener('click', () => {
         const total = calculateBouquetTotal();
-        const specs = `${state.customBouquet.mainFlower.name} • ${state.customBouquet.accentFlower.name} • ${state.customBouquet.wrapper.name}`;
+        const mf = state.customBouquet.mainFlower || { name: 'Hoa Sáp' };
+        const af = state.customBouquet.accentFlower || { name: 'Không phụ kiện' };
+        const wr = state.customBouquet.wrapper || { name: 'Giấy chuẩn' };
+        const rb = state.customBouquet.ribbon || { name: 'Ruy băng' };
+        const specs = `${mf.name} • ${af.name} • ${wr.name} • Nơ ${rb.name}`;
         
         addToCart(null, 1, {
-          name: `Bó Hoa Tự Thiết Kế (${state.customBouquet.mainFlower.name.split(' ')[1] || 'Đặc Biệt'})`,
+          name: `Bó Hoa Tự Thiết Kế (${mf.name.split(' ')[1] || 'Đặc Biệt'})`,
           price: total,
           specs: specs
         });
@@ -633,24 +709,49 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function calculateBouquetTotal() {
+    const opts = getCustomBouquetOptions();
     const { mainFlower, accentFlower, wrapper } = state.customBouquet;
-    const baseCraftFee = 50000; // Phí công cắm nghệ thuật và thiệp viết tay
-    return mainFlower.price + accentFlower.price + wrapper.price + baseCraftFee;
+    const mfPrice = (mainFlower && typeof mainFlower.price === 'number') ? mainFlower.price : 0;
+    const afPrice = (accentFlower && typeof accentFlower.price === 'number') ? accentFlower.price : 0;
+    const wrPrice = (wrapper && typeof wrapper.price === 'number') ? wrapper.price : 0;
+    const baseCraftFee = (typeof opts.baseCraftFee === 'number') ? opts.baseCraftFee : 50000;
+    return mfPrice + afPrice + wrPrice + baseCraftFee;
   }
 
   function updateBouquetLivePreview() {
+    const opts = getCustomBouquetOptions();
     const { mainFlower, accentFlower, wrapper, ribbon } = state.customBouquet;
     
-    document.getElementById('prevMainFlower').textContent = mainFlower.name;
-    document.getElementById('prevAccentFlower').textContent = accentFlower.name;
-    document.getElementById('prevWrapper').textContent = wrapper.name;
-    document.getElementById('prevRibbon').innerHTML = `
-      <span class="ribbon-color-circle" style="display:inline-block; vertical-align:middle; width:12px; height:12px; background-color:${ribbon.code}; margin-right:4px;"></span>
-      ${ribbon.name}
-    `;
+    const mfEl = document.getElementById('prevMainFlower');
+    if (mfEl) mfEl.textContent = mainFlower ? mainFlower.name : '-';
+
+    const afEl = document.getElementById('prevAccentFlower');
+    if (afEl) afEl.textContent = accentFlower ? accentFlower.name : '-';
+
+    const wrEl = document.getElementById('prevWrapper');
+    if (wrEl) wrEl.textContent = wrapper ? wrapper.name : '-';
+
+    const rbEl = document.getElementById('prevRibbon');
+    if (rbEl) {
+      if (ribbon) {
+        rbEl.innerHTML = `
+          <span class="ribbon-color-circle" style="display:inline-block; vertical-align:middle; width:12px; height:12px; background-color:${ribbon.code || '#F4A6B8'}; margin-right:4px;"></span>
+          ${ribbon.name}
+        `;
+      } else {
+        rbEl.textContent = '-';
+      }
+    }
+
+    const craftFeeEl = document.getElementById('prevCraftFee');
+    const baseCraftFee = (typeof opts.baseCraftFee === 'number') ? opts.baseCraftFee : 50000;
+    if (craftFeeEl) {
+      craftFeeEl.textContent = `${formatCurrency(baseCraftFee)} (Đã bao gồm)`;
+    }
 
     const total = calculateBouquetTotal();
-    document.getElementById('previewBouquetTotal').textContent = formatCurrency(total);
+    const totalEl = document.getElementById('previewBouquetTotal');
+    if (totalEl) totalEl.textContent = formatCurrency(total);
   }
 
   // --------------------------------------------------------------------------

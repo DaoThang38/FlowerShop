@@ -139,6 +139,10 @@
         <span>🌸</span>
         <span>Sản Phẩm & Bảng Giá</span>
       </div>
+      <div class="admin-nav-item" data-tab="builder">
+        <span>🎨</span>
+        <span>Cấu Hình Tự Phối Hoa</span>
+      </div>
       <div class="admin-nav-item" data-tab="admins" id="navItemAdmins">
         <span>🛡️</span>
         <span>Phân Quyền Nhân Sự</span>
@@ -332,6 +336,86 @@
             <!-- Injected via JavaScript -->
           </tbody>
         </table>
+      </div>
+    </section>
+
+    <!-- ================= VIEW: CUSTOM BOUQUET BUILDER CONFIG ================= -->
+    <section class="admin-view-pane" id="builderView">
+      <div class="products-admin-card">
+        
+        <!-- Header & Action Buttons -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 14px;">
+          <div>
+            <h2 style="font-family: var(--font-serif); font-size: 1.5rem; color: var(--admin-primary); margin-bottom: 4px;">
+              🎨 Cấu Hình & Bảng Giá "Tự Phối Hoa Sáp Của Bạn"
+            </h2>
+            <p style="color: var(--admin-muted); font-size: 0.88rem; margin: 0;">
+              Quản lý danh sách hoa chính, phụ kiện, giấy gói, ruy băng và chi phí công cắm cho khách hàng tự thiết kế bó hoa trên website.
+            </p>
+          </div>
+          <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+            <button type="button" class="btn-admin btn-admin-outline" id="btnResetBuilderDefaults" title="Khôi phục lại danh mục hoa phối mặc định ban đầu">
+              🔄 Đặt Lại Mặc Định
+            </button>
+            <button type="button" class="btn-admin btn-admin-primary" id="btnOpenAddBuilderOptionModal">
+              ➕ Thêm Tùy Chọn Mới
+            </button>
+          </div>
+        </div>
+
+        <!-- Craft Fee Config Card -->
+        <div class="builder-fee-card">
+          <div class="builder-fee-info">
+            <h4>✂️ Phí Công Cắm Hoa & Thiệp Viết Tay (Base Craft Fee)</h4>
+            <p>Khoản phí cố định được tự động tính vào mỗi bó hoa tự phối (bao gồm công Florist, phụ liệu bó hoa và thiệp viết tay theo yêu cầu).</p>
+          </div>
+          <div class="builder-fee-action">
+            <input type="number" id="cfgBuilderBaseFee" class="builder-fee-input" value="50000" min="0" step="5000">
+            <span style="font-weight: 700; color: #166534;">VNĐ</span>
+            <button type="button" class="btn-admin btn-admin-primary" id="btnSaveBuilderBaseFee" style="padding: 10px 18px;">
+              💾 Lưu Phí Công
+            </button>
+          </div>
+        </div>
+
+        <!-- Subtabs: 4 Steps of Custom Bouquet -->
+        <div class="builder-subtabs">
+          <button type="button" class="builder-subtab-btn active" data-subtab="mainFlowers">
+            <span>🌹 1. Hoa Sáp Chủ Đạo</span>
+            <span class="builder-subtab-badge" id="badgeMainFlowers">0</span>
+          </button>
+          <button type="button" class="builder-subtab-btn" data-subtab="accentFlowers">
+            <span>✨ 2. Hoa Phụ & Phụ Kiện</span>
+            <span class="builder-subtab-badge" id="badgeAccentFlowers">0</span>
+          </button>
+          <button type="button" class="builder-subtab-btn" data-subtab="wrappers">
+            <span>🎀 3. Phong Cách Giấy Gói / Hộp</span>
+            <span class="builder-subtab-badge" id="badgeWrappers">0</span>
+          </button>
+          <button type="button" class="builder-subtab-btn" data-subtab="ribbons">
+            <span>🎗️ 4. Nơ Ruy Băng Lụa</span>
+            <span class="builder-subtab-badge" id="badgeRibbons">0</span>
+          </button>
+        </div>
+
+        <!-- Subtab Description & Quick Hint -->
+        <div id="builderSubtabHint" style="margin-bottom: 16px; font-size: 0.85rem; color: var(--admin-muted); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+          <span id="builderSubtabDescription">Danh sách các loại hoa sáp khách có thể chọn làm hoa chủ đạo cho bó hoa.</span>
+          <span style="font-weight: 600; color: var(--admin-accent);">⚡ Thay đổi đồng bộ ngay lập tức sang trang người mua</span>
+        </div>
+
+        <!-- Dynamic Table Container for active category -->
+        <div style="overflow-x: auto;">
+          <table class="admin-table">
+            <thead id="builderTableHead">
+              <!-- Dynamically populated via JS -->
+            </thead>
+            <tbody id="builderTableBody">
+              <!-- Dynamically populated via JS -->
+            </tbody>
+          </table>
+        </div>
+
       </div>
     </section>
 
@@ -917,6 +1001,89 @@
           <button type="button" class="btn-admin btn-admin-outline" id="addAdminCancelBtn">Hủy</button>
           <button type="submit" class="btn-admin btn-admin-primary">
             💾 Tạo Tài Khoản
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ================= MODAL: THÊM / SỬA TÙY CHỌN TỰ PHỐI HOA ================= -->
+  <div class="admin-modal-overlay" id="builderOptionModal">
+    <div class="admin-modal-box" style="max-width: 580px;">
+      <button type="button" class="admin-modal-close" id="builderOptionModalClose">&times;</button>
+      <div style="padding: 24px 28px; border-bottom: 1px solid var(--admin-border);">
+        <h2 id="builderOptionModalTitle" style="font-family: var(--font-serif); font-size: 1.5rem; color: var(--admin-primary); margin: 0 0 4px 0;">
+          Thêm Tùy Chọn Mới Cho Bó Hoa
+        </h2>
+        <p style="color: var(--admin-muted); font-size: 0.85rem; margin: 0;">Thông tin cập nhật sẽ hiển thị trực tiếp trong bộ chọn của khách hàng.</p>
+      </div>
+
+      <form id="builderOptionForm" style="padding: 24px 28px;">
+        <input type="hidden" id="builderOptionId" value="">
+
+        <div class="settings-group" style="margin-bottom: 16px;">
+          <label>Phân Loại Thành Phần *</label>
+          <select id="builderOptionCategory" class="settings-control" required style="cursor: pointer; font-weight: 600;">
+            <option value="mainFlowers">🌹 Bước 1: Hoa Sáp Chủ Đạo</option>
+            <option value="accentFlowers">✨ Bước 2: Hoa Phụ & Phụ Kiện Điểm Xuyết</option>
+            <option value="wrappers">🎀 Bước 3: Phong Cách Giấy Gói / Hộp</option>
+            <option value="ribbons">🎗️ Bước 4: Màu Nơ Ruy Băng Lụa</option>
+          </select>
+        </div>
+
+        <div class="settings-group" style="margin-bottom: 16px;">
+          <label>Tên Tùy Chọn / Loại Hoa *</label>
+          <input type="text" id="builderOptionName" class="settings-control" required placeholder="Ví dụ: Hoa Hồng Sáp 4 Lớp Cao Cấp hoặc Vương Miện LED...">
+        </div>
+
+        <div class="settings-group" id="groupBuilderOptionPrice" style="margin-bottom: 16px;">
+          <label>Giá Tiền Cộng Thêm (VNĐ) *</label>
+          <input type="number" id="builderOptionPrice" class="settings-control" required min="0" step="5000" placeholder="0 nếu miễn phí">
+        </div>
+
+        <!-- Description (Used for Main Flowers & Accent Flowers) -->
+        <div class="settings-group" id="groupBuilderOptionDesc" style="margin-bottom: 16px;">
+          <label>Mô Tả Ngắn (Số lượng bông, cành, đặc điểm nổi bật)</label>
+          <input type="text" id="builderOptionDesc" class="settings-control" placeholder="Ví dụ: 19 bông hồng sáp thơm ngát, cánh mềm mịn như thật">
+        </div>
+
+        <!-- Visual: Emoji or Image URL / Upload (Used for Main Flowers & Wrappers) -->
+        <div class="settings-group" id="groupBuilderOptionVisual" style="margin-bottom: 16px;">
+          <label>Biểu Tượng Icon / Emoji Hoặc Link Ảnh Minh Họa</label>
+          <div style="display: flex; gap: 10px; align-items: center;">
+            <input type="text" id="builderOptionVisual" class="settings-control" placeholder="🌹, ✨, 🎀 hoặc link ảnh https://..." style="flex: 1;">
+            <label class="btn-admin btn-admin-outline" style="cursor: pointer; white-space: nowrap; margin: 0; padding: 10px 14px;">
+              📁 Tải Ảnh Lên
+              <input type="file" id="builderOptionUploadFile" accept="image/*" style="display: none;">
+            </label>
+          </div>
+          <small style="color: var(--admin-muted); display: block; margin-top: 4px;">Có thể nhập trực tiếp Emoji (🌹, 🌷, 🌻, 🎁, 📜...) hoặc tải ảnh từ máy tính.</small>
+        </div>
+
+        <!-- Color Picker & Hex (Used for Ribbons) -->
+        <div class="settings-group" id="groupBuilderOptionColor" style="margin-bottom: 16px; display: none;">
+          <label>Mã Màu Ruy Băng (Color Swatch) *</label>
+          <div style="display: flex; gap: 12px; align-items: center;">
+            <input type="color" id="builderOptionColorPicker" value="#F4A6B8" style="width: 48px; height: 42px; border: 1px solid var(--admin-border); border-radius: 6px; cursor: pointer; padding: 2px;">
+            <input type="text" id="builderOptionColorCode" class="settings-control" value="#F4A6B8" placeholder="#F4A6B8" style="font-family: monospace; font-weight: 700;">
+          </div>
+        </div>
+
+        <!-- Live Modal Preview -->
+        <div style="background: #f8faf9; border: 1px dashed var(--admin-border); border-radius: 8px; padding: 12px 16px; margin-bottom: 20px; display: flex; align-items: center; gap: 14px;">
+          <div id="builderModalPreviewVisual" style="width: 44px; height: 44px; border-radius: 8px; background: #fff; border: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; flex-shrink: 0;">
+            🌸
+          </div>
+          <div style="flex: 1; min-width: 0;">
+            <div id="builderModalPreviewName" style="font-weight: 700; color: var(--admin-primary); font-size: 0.95rem;">Tên tùy chọn</div>
+            <div id="builderModalPreviewSub" style="font-size: 0.8rem; color: var(--admin-muted);">+ 0₫ • Mô tả chi tiết</div>
+          </div>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 12px;">
+          <button type="button" class="btn-admin btn-admin-outline" id="builderOptionModalCancel">Hủy</button>
+          <button type="submit" class="btn-admin btn-admin-primary" style="padding: 10px 24px;">
+            💾 Lưu Tùy Chọn
           </button>
         </div>
       </form>

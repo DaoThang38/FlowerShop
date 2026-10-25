@@ -13,6 +13,8 @@ document.addEventListener('DOMContentLoaded', () => {
     orders: getStoredOrders(),
     storeSettings: getStoredSettings(),
     products: getStoredProducts(),
+    builderOptions: getStoredBuilderOptions(),
+    currentBuilderSubtab: 'mainFlowers',
     admins: getStoredAdmins(),
     currentAdmin: getStoredCurrentAdmin()
   };
@@ -81,6 +83,48 @@ document.addEventListener('DOMContentLoaded', () => {
     return products;
   }
 
+  function getStoredBuilderOptions() {
+    let opts = null;
+    try {
+      opts = JSON.parse(localStorage.getItem('owenfleur_builder_options'));
+    } catch (e) {}
+
+    const isValid = opts && 
+      Array.isArray(opts.mainFlowers) && opts.mainFlowers.length > 0 &&
+      Array.isArray(opts.accentFlowers) &&
+      Array.isArray(opts.wrappers) &&
+      Array.isArray(opts.ribbons);
+
+    if (!isValid) {
+      const defaultOpts = (typeof FLOWER_DATA !== 'undefined' && FLOWER_DATA.customBouquetOptions)
+        ? JSON.parse(JSON.stringify(FLOWER_DATA.customBouquetOptions))
+        : {
+            mainFlowers: [],
+            accentFlowers: [],
+            wrappers: [],
+            ribbons: []
+          };
+      opts = {
+        mainFlowers: defaultOpts.mainFlowers || [],
+        accentFlowers: defaultOpts.accentFlowers || [],
+        wrappers: defaultOpts.wrappers || [],
+        ribbons: defaultOpts.ribbons || [],
+        baseCraftFee: (defaultOpts && typeof defaultOpts.baseCraftFee === 'number') ? defaultOpts.baseCraftFee : 50000
+      };
+      try {
+        localStorage.setItem('owenfleur_builder_options', JSON.stringify(opts));
+      } catch (err) {}
+    } else {
+      if (typeof opts.baseCraftFee !== 'number') {
+        opts.baseCraftFee = 50000;
+        try {
+          localStorage.setItem('owenfleur_builder_options', JSON.stringify(opts));
+        } catch (err) {}
+      }
+    }
+    return opts;
+  }
+
   function getStoredAdmins() {
     let admins = JSON.parse(localStorage.getItem('owenfleur_admins'));
     // If admins has mock "Lê Hoàng" or is empty, cleanly seed with ONLY the single Master Account
@@ -146,6 +190,45 @@ document.addEventListener('DOMContentLoaded', () => {
   const prodImageInput = document.getElementById('prodEditImage');
   const prodImagePreview = document.getElementById('prodImagePreview');
 
+  // Helper: Downscale & Compress Image to Max Width/Height & Quality (Avoid localStorage 5MB quota errors)
+  function resizeAndCompressImage(file, maxWidth = 800, maxHeight = 800, quality = 0.82) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          let width = img.width;
+          let height = img.height;
+
+          if (width > height) {
+            if (width > maxWidth) {
+              height = Math.round((height * maxWidth) / width);
+              width = maxWidth;
+            }
+          } else {
+            if (height > maxHeight) {
+              width = Math.round((width * maxHeight) / height);
+              height = maxHeight;
+            }
+          }
+
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+
+          const compressedBase64 = canvas.toDataURL('image/jpeg', quality);
+          resolve(compressedBase64);
+        };
+        img.onerror = reject;
+        img.src = e.target.result;
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+
   // Initialize Dashboard
   initAuth();
   initNavigation();
@@ -153,9 +236,11 @@ document.addEventListener('DOMContentLoaded', () => {
   renderOrders();
   renderCustomersTable();
   renderProductsTable();
+  renderBuilderTable();
   renderAdminsTable();
   initSettingsForm();
   initProductCRUD();
+  initBuilderManagement();
   initAdminManagement();
   initManualOrderCreation();
   initCloudSync();
@@ -200,6 +285,8 @@ document.addEventListener('DOMContentLoaded', () => {
           renderCustomersTable();
         } else if (tab === 'products') {
           renderProductsTable();
+        } else if (tab === 'builder') {
+          renderBuilderTable();
         } else if (tab === 'admins') {
           renderAdminsTable();
         }
@@ -772,44 +859,6 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }
 
-    // Helper: Downscale & Compress Image to Max 800px & ~80KB (Avoid localStorage 5MB quota errors)
-    function resizeAndCompressImage(file, maxWidth = 800, maxHeight = 800, quality = 0.82) {
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          const img = new Image();
-          img.onload = () => {
-            let width = img.width;
-            let height = img.height;
-
-            if (width > height) {
-              if (width > maxWidth) {
-                height = Math.round((height * maxWidth) / width);
-                width = maxWidth;
-              }
-            } else {
-              if (height > maxHeight) {
-                width = Math.round((width * maxHeight) / height);
-                height = maxHeight;
-              }
-            }
-
-            const canvas = document.createElement('canvas');
-            canvas.width = width;
-            canvas.height = height;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(img, 0, 0, width, height);
-
-            const compressedBase64 = canvas.toDataURL('image/jpeg', quality);
-            resolve(compressedBase64);
-          };
-          img.onerror = reject;
-          img.src = e.target.result;
-        };
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-      });
-    }
 
     // Handle Local File Upload with Auto-Compression
     if (prodEditImageFile) {
@@ -1991,9 +2040,518 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (err) {
           console.error('Storage sync error:', err);
         }
+      } else if (e.key === 'owenfleur_builder_options') {
+        try {
+          const fresh = JSON.parse(e.newValue || '{}');
+          if (fresh && fresh.mainFlowers) {
+            state.builderOptions = fresh;
+            if (state.currentTab === 'builder') {
+              renderBuilderTable();
+            }
+          }
+        } catch (err) {}
       }
     });
   }
+
+  // --------------------------------------------------------------------------
+  // 12. Custom Bouquet Builder Management
+  // --------------------------------------------------------------------------
+  function initBuilderManagement() {
+    const subtabButtons = document.querySelectorAll('.builder-subtab-btn');
+    const baseFeeInput = document.getElementById('cfgBuilderBaseFee');
+    const saveBaseFeeBtn = document.getElementById('btnSaveBuilderBaseFee');
+    const openAddBtn = document.getElementById('btnOpenAddBuilderOptionModal');
+    const resetDefaultsBtn = document.getElementById('btnResetBuilderDefaults');
+
+    const modal = document.getElementById('builderOptionModal');
+    const modalClose = document.getElementById('builderOptionModalClose');
+    const modalCancel = document.getElementById('builderOptionModalCancel');
+    const form = document.getElementById('builderOptionForm');
+
+    const optIdInput = document.getElementById('builderOptionId');
+    const categorySelect = document.getElementById('builderOptionCategory');
+    const nameInput = document.getElementById('builderOptionName');
+    const priceInput = document.getElementById('builderOptionPrice');
+    const descInput = document.getElementById('builderOptionDesc');
+    const visualInput = document.getElementById('builderOptionVisual');
+    const uploadFileInput = document.getElementById('builderOptionUploadFile');
+    const colorPicker = document.getElementById('builderOptionColorPicker');
+    const colorCodeInput = document.getElementById('builderOptionColorCode');
+
+    const groupPrice = document.getElementById('groupBuilderOptionPrice');
+    const groupDesc = document.getElementById('groupBuilderOptionDesc');
+    const groupVisual = document.getElementById('groupBuilderOptionVisual');
+    const groupColor = document.getElementById('groupBuilderOptionColor');
+
+    const modalTitle = document.getElementById('builderOptionModalTitle');
+    const previewVisual = document.getElementById('builderModalPreviewVisual');
+    const previewName = document.getElementById('builderModalPreviewName');
+    const previewSub = document.getElementById('builderModalPreviewSub');
+
+    // Subtab switching
+    subtabButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const subtab = btn.getAttribute('data-subtab');
+        state.currentBuilderSubtab = subtab;
+        subtabButtons.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        renderBuilderTable();
+      });
+    });
+
+    // Save Base Craft Fee
+    if (saveBaseFeeBtn && baseFeeInput) {
+      saveBaseFeeBtn.addEventListener('click', () => {
+        const fee = Math.max(0, parseInt(baseFeeInput.value, 10) || 0);
+        state.builderOptions.baseCraftFee = fee;
+        saveBuilderOptions();
+        showAdminToast(`✂️ Đã cập nhật Phí công cắm nghệ thuật: ${formatCurrency(fee)}!`);
+      });
+    }
+
+    // Reset Defaults
+    if (resetDefaultsBtn) {
+      resetDefaultsBtn.addEventListener('click', () => {
+        if (confirm('Bạn có chắc chắn muốn khôi phục danh mục Tự Phối Hoa về cấu hình gốc mặc định không? Mọi tùy chỉnh riêng sẽ được làm mới.')) {
+          const defaultOpts = (typeof FLOWER_DATA !== 'undefined' && FLOWER_DATA.customBouquetOptions)
+            ? JSON.parse(JSON.stringify(FLOWER_DATA.customBouquetOptions))
+            : {};
+          state.builderOptions = {
+            mainFlowers: defaultOpts.mainFlowers || [],
+            accentFlowers: defaultOpts.accentFlowers || [],
+            wrappers: defaultOpts.wrappers || [],
+            ribbons: defaultOpts.ribbons || [],
+            baseCraftFee: (defaultOpts && typeof defaultOpts.baseCraftFee === 'number') ? defaultOpts.baseCraftFee : 50000
+          };
+          saveBuilderOptions();
+          renderBuilderTable();
+          showAdminToast('🔄 Đã khôi phục danh mục hoa phối về mặc định của tiệm!');
+        }
+      });
+    }
+
+    // Modal Field Toggling
+    function updateModalFieldsByCategory(cat) {
+      if (cat === 'mainFlowers') {
+        if (groupPrice) groupPrice.style.display = 'block';
+        if (groupDesc) groupDesc.style.display = 'block';
+        if (groupVisual) groupVisual.style.display = 'block';
+        if (groupColor) groupColor.style.display = 'none';
+      } else if (cat === 'accentFlowers') {
+        if (groupPrice) groupPrice.style.display = 'block';
+        if (groupDesc) groupDesc.style.display = 'block';
+        if (groupVisual) groupVisual.style.display = 'none';
+        if (groupColor) groupColor.style.display = 'none';
+      } else if (cat === 'wrappers') {
+        if (groupPrice) groupPrice.style.display = 'block';
+        if (groupDesc) groupDesc.style.display = 'none';
+        if (groupVisual) groupVisual.style.display = 'block';
+        if (groupColor) groupColor.style.display = 'none';
+      } else if (cat === 'ribbons') {
+        if (groupPrice) groupPrice.style.display = 'none';
+        if (groupDesc) groupDesc.style.display = 'none';
+        if (groupVisual) groupVisual.style.display = 'none';
+        if (groupColor) groupColor.style.display = 'block';
+      }
+      updateModalLivePreview();
+    }
+
+    function updateModalLivePreview() {
+      const cat = categorySelect ? categorySelect.value : 'mainFlowers';
+      const name = nameInput ? (nameInput.value.trim() || 'Tên tùy chọn') : '';
+      const price = priceInput ? (parseInt(priceInput.value, 10) || 0) : 0;
+      const desc = descInput ? descInput.value.trim() : '';
+      const visual = visualInput ? visualInput.value.trim() : '';
+      const color = colorCodeInput ? colorCodeInput.value.trim() : '#F4A6B8';
+
+      if (previewName) previewName.textContent = name;
+
+      if (previewVisual) {
+        if (cat === 'ribbons') {
+          previewVisual.innerHTML = `<span class="builder-swatch-circle" style="background-color: ${color}; width: 28px; height: 28px;"></span>`;
+        } else if (visual && (visual.startsWith('http') || visual.startsWith('data:'))) {
+          previewVisual.innerHTML = `<img src="${visual}" alt="" style="width: 100%; height: 100%; object-fit: cover;">`;
+        } else {
+          previewVisual.textContent = visual || (cat === 'mainFlowers' ? '🌸' : (cat === 'wrappers' ? '🎀' : '✨'));
+        }
+      }
+
+      if (previewSub) {
+        if (cat === 'ribbons') {
+          previewSub.textContent = `Nơ lụa mềm mại • Mã màu ${color}`;
+        } else {
+          const priceText = price > 0 ? `+ ${formatCurrency(price)}` : 'Miễn phí';
+          previewSub.textContent = desc ? `${priceText} • ${desc}` : priceText;
+        }
+      }
+    }
+
+    if (categorySelect) {
+      categorySelect.addEventListener('change', () => {
+        updateModalFieldsByCategory(categorySelect.value);
+      });
+    }
+
+    [nameInput, priceInput, descInput, visualInput].forEach(el => {
+      if (el) el.addEventListener('input', updateModalLivePreview);
+    });
+
+    if (colorPicker && colorCodeInput) {
+      colorPicker.addEventListener('input', (e) => {
+        colorCodeInput.value = e.target.value.toUpperCase();
+        updateModalLivePreview();
+      });
+      colorCodeInput.addEventListener('input', (e) => {
+        colorPicker.value = e.target.value;
+        updateModalLivePreview();
+      });
+    }
+
+    // Image Upload Compression for Visual
+    if (uploadFileInput) {
+      uploadFileInput.addEventListener('change', async (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (!file) return;
+        try {
+          showAdminToast('⏳ Đang tối ưu & nén ảnh...');
+          const compressed = await resizeAndCompressImage(file, 400, 400, 0.85);
+          if (visualInput) {
+            visualInput.value = compressed;
+            updateModalLivePreview();
+          }
+          showAdminToast('✅ Đã tải ảnh minh họa thành công!');
+        } catch (err) {
+          console.error('Builder image compress error:', err);
+          alert('Không thể nén ảnh, vui lòng thử lại bằng ảnh định dạng JPG/PNG khác.');
+        }
+      });
+    }
+
+    // Open Add Modal
+    if (openAddBtn) {
+      openAddBtn.addEventListener('click', () => {
+        if (modalTitle) modalTitle.textContent = '➕ Thêm Tùy Chọn Mới Cho Bó Hoa';
+        if (optIdInput) optIdInput.value = '';
+        if (categorySelect) categorySelect.value = state.currentBuilderSubtab || 'mainFlowers';
+        if (nameInput) nameInput.value = '';
+        if (priceInput) priceInput.value = '50000';
+        if (descInput) descInput.value = '';
+        if (visualInput) visualInput.value = state.currentBuilderSubtab === 'mainFlowers' ? '🌸' : '🎀';
+        if (colorPicker) colorPicker.value = '#F4A6B8';
+        if (colorCodeInput) colorCodeInput.value = '#F4A6B8';
+
+        updateModalFieldsByCategory(categorySelect ? categorySelect.value : 'mainFlowers');
+        if (modal) modal.classList.add('active');
+        if (nameInput) nameInput.focus();
+      });
+    }
+
+    // Close Modal
+    function closeModal() {
+      if (modal) modal.classList.remove('active');
+    }
+    if (modalClose) modalClose.addEventListener('click', closeModal);
+    if (modalCancel) modalCancel.addEventListener('click', closeModal);
+    if (modal) {
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) closeModal();
+      });
+    }
+
+    // Form Submit (Save / Edit)
+    if (form) {
+      form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const cat = categorySelect.value;
+        const id = optIdInput.value.trim();
+        const name = nameInput.value.trim();
+        const price = Math.max(0, parseInt(priceInput.value, 10) || 0);
+        const desc = descInput ? descInput.value.trim() : '';
+        const visual = visualInput ? visualInput.value.trim() : '';
+        const color = colorCodeInput ? colorCodeInput.value.trim().toUpperCase() : '#F4A6B8';
+
+        if (!name) {
+          alert('Vui lòng nhập tên tùy chọn!');
+          return;
+        }
+
+        if (!Array.isArray(state.builderOptions[cat])) {
+          state.builderOptions[cat] = [];
+        }
+
+        const list = state.builderOptions[cat];
+
+        if (id) {
+          // Edit existing
+          const item = list.find(x => x.id === id);
+          if (item) {
+            item.name = name;
+            if (cat === 'ribbons') {
+              item.code = color;
+            } else if (cat === 'mainFlowers') {
+              item.price = price;
+              item.desc = desc;
+              item.img = visual || '🌸';
+            } else if (cat === 'accentFlowers') {
+              item.price = price;
+              item.desc = desc;
+            } else if (cat === 'wrappers') {
+              item.price = price;
+              item.preview = visual || '🎀';
+            }
+          }
+        } else {
+          // Create new
+          const newId = `${cat.slice(0, 4)}_${Date.now()}`;
+          const newItem = { id: newId, name: name };
+          if (cat === 'ribbons') {
+            newItem.code = color;
+          } else if (cat === 'mainFlowers') {
+            newItem.price = price;
+            newItem.desc = desc;
+            newItem.img = visual || '🌸';
+          } else if (cat === 'accentFlowers') {
+            newItem.price = price;
+            newItem.desc = desc;
+          } else if (cat === 'wrappers') {
+            newItem.price = price;
+            newItem.preview = visual || '🎀';
+          }
+          list.push(newItem);
+        }
+
+        saveBuilderOptions();
+        closeModal();
+        state.currentBuilderSubtab = cat;
+        // sync active subtab button
+        subtabButtons.forEach(b => {
+          if (b.getAttribute('data-subtab') === cat) b.classList.add('active');
+          else b.classList.remove('active');
+        });
+        renderBuilderTable();
+        showAdminToast(`🌸 Đã lưu tùy chọn "${name}" thành công!`);
+      });
+    }
+  }
+
+  function saveBuilderOptions() {
+    try {
+      localStorage.setItem('owenfleur_builder_options', JSON.stringify(state.builderOptions));
+    } catch (e) {
+      console.error('Storage error while saving builder options:', e);
+      alert('Bộ nhớ trình duyệt đầy, vui lòng sử dụng ảnh có dung lượng nhỏ hơn.');
+    }
+  }
+
+  function renderBuilderTable() {
+    const opts = state.builderOptions;
+    if (!opts) return;
+
+    // Update Badges
+    const badgeMain = document.getElementById('badgeMainFlowers');
+    const badgeAccent = document.getElementById('badgeAccentFlowers');
+    const badgeWrap = document.getElementById('badgeWrappers');
+    const badgeRib = document.getElementById('badgeRibbons');
+
+    if (badgeMain) badgeMain.textContent = (opts.mainFlowers || []).length;
+    if (badgeAccent) badgeAccent.textContent = (opts.accentFlowers || []).length;
+    if (badgeWrap) badgeWrap.textContent = (opts.wrappers || []).length;
+    if (badgeRib) badgeRib.textContent = (opts.ribbons || []).length;
+
+    // Sync Base Craft Fee Input
+    const baseFeeInput = document.getElementById('cfgBuilderBaseFee');
+    if (baseFeeInput && typeof opts.baseCraftFee === 'number') {
+      baseFeeInput.value = opts.baseCraftFee;
+    }
+
+    const subtab = state.currentBuilderSubtab || 'mainFlowers';
+    const descEl = document.getElementById('builderSubtabDescription');
+    const thead = document.getElementById('builderTableHead');
+    const tbody = document.getElementById('builderTableBody');
+
+    if (!thead || !tbody) return;
+
+    if (subtab === 'mainFlowers') {
+      if (descEl) descEl.textContent = 'Danh sách các loại hoa sáp khách có thể chọn làm hoa chủ đạo (Hoa chính định hình phong cách bó hoa).';
+      thead.innerHTML = `
+        <tr>
+          <th style="width: 70px;">Minh Họa</th>
+          <th>Tên Mẫu Hoa Sáp</th>
+          <th>Giá Tiền Bán</th>
+          <th>Mô Tả Quy Cách (Số cành/bông)</th>
+          <th style="width: 150px; text-align: center;">Thao Tác</th>
+        </tr>
+      `;
+      const list = opts.mainFlowers || [];
+      if (list.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding: 28px; color: var(--admin-muted);">Chưa có loại hoa chủ đạo nào. Hãy bấm "+ Thêm Tùy Chọn Mới" để tạo.</td></tr>`;
+      } else {
+        tbody.innerHTML = list.map(item => {
+          const isImgUrl = item.img && (item.img.startsWith('http') || item.img.startsWith('data:'));
+          const visualHtml = isImgUrl 
+            ? `<div class="builder-visual-chip"><img src="${item.img}" alt="${item.name}"></div>`
+            : `<div class="builder-visual-chip">${item.img || '🌹'}</div>`;
+
+          return `
+            <tr>
+              <td>${visualHtml}</td>
+              <td><strong style="color: var(--admin-primary);">${item.name}</strong></td>
+              <td><span style="font-weight: 700; color: #166534;">+ ${formatCurrency(item.price)}</span></td>
+              <td style="color: var(--admin-muted); font-size: 0.85rem;">${item.desc || '—'}</td>
+              <td style="text-align: center;">
+                <button type="button" class="btn-admin btn-admin-outline" onclick="editBuilderItem('mainFlowers', '${item.id}')" style="padding: 5px 10px; font-size: 0.8rem; margin-right: 4px;">✏️ Sửa</button>
+                <button type="button" class="btn-admin btn-admin-outline" onclick="deleteBuilderItem('mainFlowers', '${item.id}')" style="padding: 5px 10px; font-size: 0.8rem; color: #dc2626; border-color: #fca5a5;">🗑️</button>
+              </td>
+            </tr>
+          `;
+        }).join('');
+      }
+    } else if (subtab === 'accentFlowers') {
+      if (descEl) descEl.textContent = 'Phụ kiện trang trí thêm (Vương miện LED, gấu bông mini, cành hoa baby khô vĩnh cửu...) giúp bó hoa lộng lẫy hơn.';
+      thead.innerHTML = `
+        <tr>
+          <th>Tên Phụ Kiện / Quà Tặng Kèm</th>
+          <th>Giá Tiền Cộng Thêm</th>
+          <th>Mô Tả Chi Tiết</th>
+          <th style="width: 150px; text-align: center;">Thao Tác</th>
+        </tr>
+      `;
+      const list = opts.accentFlowers || [];
+      if (list.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding: 28px; color: var(--admin-muted);">Chưa có phụ kiện nào.</td></tr>`;
+      } else {
+        tbody.innerHTML = list.map(item => `
+          <tr>
+            <td><strong style="color: var(--admin-primary);">${item.name}</strong></td>
+            <td>
+              ${item.price > 0 
+                ? `<span style="font-weight: 700; color: #166534;">+ ${formatCurrency(item.price)}</span>` 
+                : `<span style="display:inline-block; padding: 2px 8px; border-radius: 999px; background: #e0f2fe; color: #0369a1; font-weight: 600; font-size: 0.78rem;">Miễn Phí</span>`}
+            </td>
+            <td style="color: var(--admin-muted); font-size: 0.85rem;">${item.desc || '—'}</td>
+            <td style="text-align: center;">
+              <button type="button" class="btn-admin btn-admin-outline" onclick="editBuilderItem('accentFlowers', '${item.id}')" style="padding: 5px 10px; font-size: 0.8rem; margin-right: 4px;">✏️ Sửa</button>
+              <button type="button" class="btn-admin btn-admin-outline" onclick="deleteBuilderItem('accentFlowers', '${item.id}')" style="padding: 5px 10px; font-size: 0.8rem; color: #dc2626; border-color: #fca5a5;">🗑️</button>
+            </td>
+          </tr>
+        `).join('');
+      }
+    } else if (subtab === 'wrappers') {
+      if (descEl) descEl.textContent = 'Các chất liệu và kiểu dáng bọc hoa: Giấy mờ chống thấm Hàn Quốc, giấy xi măng Kraft vintage, hoặc hộp mica trong suốt sang trọng.';
+      thead.innerHTML = `
+        <tr>
+          <th style="width: 70px;">Minh Họa</th>
+          <th>Phong Cách Giấy Gói / Hộp Mica</th>
+          <th>Giá Tiền</th>
+          <th style="width: 150px; text-align: center;">Thao Tác</th>
+        </tr>
+      `;
+      const list = opts.wrappers || [];
+      if (list.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding: 28px; color: var(--admin-muted);">Chưa có mẫu giấy gói nào.</td></tr>`;
+      } else {
+        tbody.innerHTML = list.map(item => {
+          const isImgUrl = item.preview && (item.preview.startsWith('http') || item.preview.startsWith('data:'));
+          const visualHtml = isImgUrl 
+            ? `<div class="builder-visual-chip"><img src="${item.preview}" alt="${item.name}"></div>`
+            : `<div class="builder-visual-chip">${item.preview || '🎀'}</div>`;
+
+          return `
+            <tr>
+              <td>${visualHtml}</td>
+              <td><strong style="color: var(--admin-primary);">${item.name}</strong></td>
+              <td><span style="font-weight: 700; color: #166534;">+ ${formatCurrency(item.price)}</span></td>
+              <td style="text-align: center;">
+                <button type="button" class="btn-admin btn-admin-outline" onclick="editBuilderItem('wrappers', '${item.id}')" style="padding: 5px 10px; font-size: 0.8rem; margin-right: 4px;">✏️ Sửa</button>
+                <button type="button" class="btn-admin btn-admin-outline" onclick="deleteBuilderItem('wrappers', '${item.id}')" style="padding: 5px 10px; font-size: 0.8rem; color: #dc2626; border-color: #fca5a5;">🗑️</button>
+              </td>
+            </tr>
+          `;
+        }).join('');
+      }
+    } else if (subtab === 'ribbons') {
+      if (descEl) descEl.textContent = 'Màu sắc nơ ruy băng lụa cao cấp thắt nơ hoàn thiện bó hoa (Pastel, Đỏ bordeaux, Xanh rêu, Vàng champagne...).';
+      thead.innerHTML = `
+        <tr>
+          <th style="width: 70px;">Màu Nơ</th>
+          <th>Tên Màu Ruy Băng Lụa</th>
+          <th>Mã Màu (Hex Code)</th>
+          <th style="width: 150px; text-align: center;">Thao Tác</th>
+        </tr>
+      `;
+      const list = opts.ribbons || [];
+      if (list.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding: 28px; color: var(--admin-muted);">Chưa có màu nơ ruy băng nào.</td></tr>`;
+      } else {
+        tbody.innerHTML = list.map(item => `
+          <tr>
+            <td>
+              <span class="builder-swatch-circle" style="background-color: ${item.code || '#F4A6B8'};"></span>
+            </td>
+            <td><strong style="color: var(--admin-primary);">${item.name}</strong></td>
+            <td><code style="background: #f1f5f9; padding: 3px 8px; border-radius: 4px; font-weight: 700; color: #334155;">${item.code || '#F4A6B8'}</code></td>
+            <td style="text-align: center;">
+              <button type="button" class="btn-admin btn-admin-outline" onclick="editBuilderItem('ribbons', '${item.id}')" style="padding: 5px 10px; font-size: 0.8rem; margin-right: 4px;">✏️ Sửa</button>
+              <button type="button" class="btn-admin btn-admin-outline" onclick="deleteBuilderItem('ribbons', '${item.id}')" style="padding: 5px 10px; font-size: 0.8rem; color: #dc2626; border-color: #fca5a5;">🗑️</button>
+            </td>
+          </tr>
+        `).join('');
+      }
+    }
+  }
+
+  // Global Helpers for onclick edit and delete
+  window.editBuilderItem = function(category, id) {
+    const list = state.builderOptions[category] || [];
+    const item = list.find(x => x.id === id);
+    if (!item) return;
+
+    const modal = document.getElementById('builderOptionModal');
+    const modalTitle = document.getElementById('builderOptionModalTitle');
+    const optIdInput = document.getElementById('builderOptionId');
+    const categorySelect = document.getElementById('builderOptionCategory');
+    const nameInput = document.getElementById('builderOptionName');
+    const priceInput = document.getElementById('builderOptionPrice');
+    const descInput = document.getElementById('builderOptionDesc');
+    const visualInput = document.getElementById('builderOptionVisual');
+    const colorPicker = document.getElementById('builderOptionColorPicker');
+    const colorCodeInput = document.getElementById('builderOptionColorCode');
+
+    if (modalTitle) modalTitle.textContent = `✏️ Chỉnh Sửa: ${item.name}`;
+    if (optIdInput) optIdInput.value = item.id;
+    if (categorySelect) categorySelect.value = category;
+    if (nameInput) nameInput.value = item.name || '';
+    if (priceInput) priceInput.value = item.price !== undefined ? item.price : 0;
+    if (descInput) descInput.value = item.desc || '';
+    if (visualInput) visualInput.value = item.img || item.preview || '';
+    if (colorPicker) colorPicker.value = item.code || '#F4A6B8';
+    if (colorCodeInput) colorCodeInput.value = item.code || '#F4A6B8';
+
+    // Trigger field toggle and preview
+    categorySelect.dispatchEvent(new Event('change'));
+    nameInput.dispatchEvent(new Event('input'));
+
+    if (modal) modal.classList.add('active');
+  };
+
+  window.deleteBuilderItem = function(category, id) {
+    const list = state.builderOptions[category] || [];
+    if (list.length <= 1) {
+      alert('Không thể xóa tùy chọn cuối cùng! Khách hàng cần ít nhất 1 tùy chọn để hoàn thành bó hoa.');
+      return;
+    }
+
+    const item = list.find(x => x.id === id);
+    const itemName = item ? item.name : 'tùy chọn này';
+
+    if (confirm(`Bạn có chắc chắn muốn xóa "${itemName}" khỏi danh sách phối hoa không?`)) {
+      state.builderOptions[category] = list.filter(x => x.id !== id);
+      saveBuilderOptions();
+      renderBuilderTable();
+      showAdminToast(`🗑️ Đã xóa "${itemName}" thành công!`);
+    }
+  };
 });
 
 function formatCurrency(amount) {
