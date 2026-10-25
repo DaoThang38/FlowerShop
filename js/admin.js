@@ -27,9 +27,22 @@ document.addEventListener('DOMContentLoaded', () => {
       orders = [];
       localStorage.setItem('owenfleur_orders', JSON.stringify(orders));
     } else {
-      // Automatically clean up any past development test mock orders
+      // Automatically clean up any past development test mock orders and heal [object Object] in florist notes
+      let needsSave = false;
       orders = orders.filter(o => o.id !== 'FLR-89214' && o.id !== 'FLR-89210' && o.id !== 'FLR-89195');
-      localStorage.setItem('owenfleur_orders', JSON.stringify(orders));
+      orders.forEach(o => {
+        if (typeof o.floristNotes === 'object' && o.floristNotes !== null) {
+          o.floristNotes = o.floristNotes.floristNotes || o.floristNotes.notes || '';
+          needsSave = true;
+        }
+        if (typeof o.floristNotes === 'string' && o.floristNotes.includes('[object Object]')) {
+          o.floristNotes = o.floristNotes.replace(/\[object Object\]/g, '').trim();
+          needsSave = true;
+        }
+      });
+      if (needsSave) {
+        localStorage.setItem('owenfleur_orders', JSON.stringify(orders));
+      }
     }
     return orders;
   }
@@ -433,16 +446,23 @@ document.addEventListener('DOMContentLoaded', () => {
       const safeTimeLabel = window.escapeHtml ? window.escapeHtml(order.deliveryTimeLabel || 'Trong ngày') : (order.deliveryTimeLabel || 'Trong ngày');
       const safeDate = window.escapeHtml ? window.escapeHtml(order.deliveryDate || '') : (order.deliveryDate || '');
       const safeCardMsg = window.escapeHtml ? window.escapeHtml(order.cardMessage || '') : (order.cardMessage || '');
-      const safeFloristNotes = window.escapeHtml ? window.escapeHtml(order.floristNotes || '') : (order.floristNotes || '');
+      let rawNote = order.floristNotes || '';
+      if (typeof rawNote === 'object' && rawNote !== null) {
+        rawNote = rawNote.floristNotes || rawNote.notes || '';
+      }
+      if (typeof rawNote === 'string' && rawNote.includes('[object Object]')) {
+        rawNote = rawNote.replace(/\[object Object\]/g, '').trim();
+      }
+      const safeFloristNotes = window.escapeHtml ? window.escapeHtml(rawNote) : rawNote;
 
       let archiveHeaderHtml = '';
       if (state.currentFilter === 'all' && isCancelled && !hasShownArchiveHeader) {
         hasShownArchiveHeader = true;
         archiveHeaderHtml = `
-          <div style="margin: 36px 0 16px 0; display: flex; align-items: center; gap: 14px;">
+          <div style="margin: 30px 0 14px 0; display: flex; align-items: center; gap: 10px;">
             <div style="height: 1px; flex: 1; background: #cbd5e1;"></div>
-            <span style="font-size: 0.88rem; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 1px; display: inline-flex; align-items: center; gap: 6px;">
-              🗄️ Khu Vực Lưu Trữ Đơn Đã Hủy (${cancelledCount} đơn)
+            <span style="font-size: 0.8rem; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;">
+              🗄️ Đơn Đã Hủy / Lưu Trữ (${cancelledCount})
             </span>
             <div style="height: 1px; flex: 1; background: #cbd5e1;"></div>
           </div>
@@ -452,19 +472,21 @@ document.addEventListener('DOMContentLoaded', () => {
       return archiveHeaderHtml + `
       <div class="order-row-card ${isCancelled ? 'is-cancelled' : (order.isUrgent ? 'is-urgent' : '')}" id="orderCard-${safeId}">
         <div class="order-header-row">
-          <div class="order-code-group">
-            <span class="order-id">#${safeId}</span>
-            ${isCancelled ? `<span style="background: #fee2e2; color: #991b1b; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 800;">❌ ĐÃ HỦY / LƯU TRỮ</span>` : (order.isUrgent ? `<span class="urgent-tag">⚡ KHẨN CẤP / HỎA TỐC</span>` : '')}
-            <span style="font-size: 0.8rem; color: var(--admin-muted);">
-              Đặt lúc: ${new Date(order.createdAt).toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'})} - ${new Date(order.createdAt).toLocaleDateString('vi-VN')}
-            </span>
-          </div>
-
-          <div style="display: flex; align-items: center; gap: 12px;">
+          <div class="order-header-top">
+            <div class="order-code-group">
+              <span class="order-id">#${safeId}</span>
+              ${isCancelled ? `<span class="cancelled-tag">❌ ĐÃ HỦY</span>` : (order.isUrgent ? `<span class="urgent-tag">⚡ HỎA TỐC</span>` : '')}
+            </div>
             <span class="status-badge ${order.status}">
               ${getStatusBadgeName(order.status)}
             </span>
-            <span style="font-size: 1.15rem; font-weight: 800; color: ${isCancelled ? '#94a3b8' : 'var(--admin-primary)'};">
+          </div>
+
+          <div class="order-header-meta">
+            <span class="order-time-stamp">
+              📅 ${new Date(order.createdAt).toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'})} • ${new Date(order.createdAt).toLocaleDateString('vi-VN')}
+            </span>
+            <span class="order-total-price ${isCancelled ? 'is-cancelled' : ''}">
               ${formatCurrency(order.total)}
             </span>
           </div>
@@ -479,8 +501,8 @@ document.addEventListener('DOMContentLoaded', () => {
             <ul class="order-items-list">
               ${order.items.map(it => `
                 <li>
-                  <span><strong>${it.quantity}x</strong> ${window.escapeHtml ? window.escapeHtml(it.name) : it.name}</span>
-                  <span style="font-weight: 600;">${formatCurrency(it.price * it.quantity)}</span>
+                  <span class="item-name"><strong>${it.quantity}x</strong> ${window.escapeHtml ? window.escapeHtml(it.name) : it.name}</span>
+                  <span class="item-price">${formatCurrency(it.price * it.quantity)}</span>
                 </li>
               `).join('')}
             </ul>
@@ -497,11 +519,11 @@ document.addEventListener('DOMContentLoaded', () => {
             <div style="font-weight: 700; color: var(--admin-primary); margin-bottom: 8px; font-size: 0.88rem;">
               📍 Thông tin người nhận:
             </div>
-            <div><span class="label">Người nhận:</span> <strong>${safeName}</strong></div>
-            <div><span class="label">Số điện thoại:</span> <a href="tel:${safePhone}" style="color: var(--admin-accent); font-weight: 600;">${safePhone}</a></div>
-            <div><span class="label">Địa chỉ:</span> ${safeAddress}</div>
-            <div style="margin-top: 4px; color: ${isCancelled ? '#64748b' : 'var(--admin-urgent)'}; font-weight: 600;">
-              ⏰ Giờ hẹn giao: ${safeTimeLabel} (${safeDate})
+            <div class="recipient-line"><span class="label">Người nhận:</span> <strong class="val">${safeName}</strong></div>
+            <div class="recipient-line"><span class="label">Số điện thoại:</span> <a href="tel:${safePhone}" class="val" style="color: var(--admin-accent); font-weight: 700; white-space: nowrap;">${safePhone}</a></div>
+            <div class="recipient-line"><span class="label">Địa chỉ:</span> <span class="val">${safeAddress}</span></div>
+            <div class="recipient-line" style="margin-top: 4px; color: ${isCancelled ? '#64748b' : 'var(--admin-urgent)'}; font-weight: 600;">
+              <span class="label">Giờ hẹn:</span> <span class="val" style="white-space: nowrap;">⏰ ${safeTimeLabel} (${safeDate})</span>
             </div>
           </div>
 
@@ -511,11 +533,11 @@ document.addEventListener('DOMContentLoaded', () => {
               💳 Thanh toán & Ghi chú florist:
             </div>
             <div style="font-size: 0.85rem; margin-bottom: 8px;">
-              <span style="display: inline-block; padding: 3px 8px; border-radius: 4px; background: ${isCancelled ? '#f1f5f9' : '#edf7f2'}; color: ${isCancelled ? '#64748b' : '#1e5e3a'}; font-weight: 600;">
+              <span style="display: inline-block; padding: 3px 8px; border-radius: 4px; background: ${isCancelled ? '#f1f5f9' : '#edf7f2'}; color: ${isCancelled ? '#64748b' : '#1e5e3a'}; font-weight: 600; white-space: nowrap;">
                 ${window.escapeHtml ? window.escapeHtml(order.paymentStatus || order.paymentMethod) : (order.paymentStatus || order.paymentMethod)}
               </span>
             </div>
-            <div style="background: #f4f6f5; padding: 10px; border-radius: var(--radius-sm); font-size: 0.82rem; color: var(--admin-muted);">
+            <div style="background: #f4f6f5; padding: 10px; border-radius: var(--radius-sm); font-size: 0.82rem; color: var(--admin-muted); line-height: 1.4; word-break: break-word;">
               <strong>Ghi chú:</strong> ${safeFloristNotes || 'Chưa có ghi chú đặc biệt.'}
             </div>
           </div>
@@ -523,13 +545,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         <!-- Action bar -->
         <div class="order-actions-bar">
-          <div style="display: flex; align-items: center; gap: 10px;">
-            <span style="font-size: 0.85rem; font-weight: 600; color: var(--admin-muted);">Chuyển trạng thái:</span>
+          <div class="order-status-select-wrap">
+            <span class="status-select-label">Trạng thái:</span>
             <select class="status-selector" data-action="change-status" data-id="${safeId}">
               <option value="pending" ${order.status === 'pending' ? 'selected' : ''}>⏳ Chờ Xác Nhận</option>
               <option value="crafting" ${order.status === 'crafting' ? 'selected' : ''}>✂️ Đang Cắm Hoa (Crafting)</option>
               <option value="photo_sent" ${order.status === 'photo_sent' ? 'selected' : ''}>📸 Đã Cắm Xong - Chờ Duyệt Ảnh</option>
-              <option value="delivering" ${order.status === 'delivering' ? 'selected' : ''}>🚚 Đang Giao Hoa Cho Khách</option>
+              <option value="delivering" ${order.status === 'delivering' ? 'selected' : ''}>🚚 Đang Đi Giao Cho Khách</option>
               <option value="delivered" ${order.status === 'delivered' ? 'selected' : ''}>✅ Đã Giao Thành Công</option>
               <option value="cancelled" ${order.status === 'cancelled' ? 'selected' : ''}>❌ Hủy Đơn Hàng (Lưu trữ)</option>
             </select>
@@ -537,25 +559,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
           <div class="order-btns-group">
             ${isCancelled ? `
-              <button class="btn-admin" style="background: #e8f5e9; color: #1e5e3a; border: 1px solid #c2e2d0; font-size: 0.82rem; padding: 6px 14px;" onclick="restoreOrderById('${safeId}')" title="Khôi phục lại đơn hàng về trạng thái Chờ xác nhận">
-                ♻️ Khôi Phục Đơn
+              <button class="btn-admin btn-restore" onclick="restoreOrderById('${safeId}')" title="Khôi phục lại đơn hàng">
+                ♻️ Khôi Phục
               </button>
-              <button class="btn-admin" style="background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; font-size: 0.82rem; padding: 6px 14px;" onclick="deleteOrderPermanently('${safeId}')" title="Xóa vĩnh viễn đơn hàng này">
+              <button class="btn-admin btn-delete-perm" onclick="deleteOrderPermanently('${safeId}')" title="Xóa vĩnh viễn đơn hàng này">
                 🗑️ Xóa Vĩnh Viễn
               </button>
             ` : `
               ${(order.recipientPhone || order.senderPhone) ? `
-              <a href="https://zalo.me/${(order.recipientPhone || order.senderPhone).replace(/[^0-9]/g, '')}" target="_blank" class="btn-admin" style="background: #0068ff; color: #fff; padding: 7px 12px; font-size: 0.8rem; text-decoration: none;" title="Nhắn Zalo gửi ảnh duyệt hoa">
-                💬 Zalo Khách
+              <a href="https://zalo.me/${(order.recipientPhone || order.senderPhone).replace(/[^0-9]/g, '')}" target="_blank" class="btn-admin btn-zalo" title="Nhắn Zalo gửi ảnh duyệt hoa">
+                💬 Zalo
               </a>
-              <a href="tel:${(order.recipientPhone || order.senderPhone).replace(/[^0-9]/g, '')}" class="btn-admin btn-admin-outline" style="padding: 7px 10px; font-size: 0.8rem; text-decoration: none;" title="Gọi điện thoại">
+              <a href="tel:${(order.recipientPhone || order.senderPhone).replace(/[^0-9]/g, '')}" class="btn-admin btn-call" title="Gọi điện thoại">
                 📞 Gọi
               </a>` : ''}
               <button class="btn-admin ${order.isUrgent ? 'btn-admin-outline' : 'btn-admin-urgent'}" data-action="toggle-urgent" data-id="${safeId}">
-                ${order.isUrgent ? '⚡ Hủy Khẩn Cấp' : '⚡ ĐẨY HỎA TỐC GẤP'}
+                ${order.isUrgent ? '⚡ Hủy Gấp' : '⚡ Hỏa Tốc'}
               </button>
               <button class="btn-admin btn-admin-outline" data-action="print-slip" data-id="${safeId}">
-                🖨️ In Phiếu Giao & Thiệp
+                🖨️ In Phiếu
               </button>
               <button class="btn-admin btn-admin-outline" data-action="edit-note" data-id="${safeId}">
                 📝 Ghi Chú
@@ -691,7 +713,7 @@ document.addEventListener('DOMContentLoaded', () => {
       order.floristNotes = newNote.trim();
       saveOrders();
       if (window.OwenCloud && OwenCloud.updateOrderStatus) {
-        OwenCloud.updateOrderStatus(orderId, order.status, { floristNotes: order.floristNotes });
+        OwenCloud.updateOrderStatus(orderId, order.status, order.floristNotes);
       }
       renderOrders();
       showAdminToast('Đã lưu ghi chú đơn hàng!', 'success');

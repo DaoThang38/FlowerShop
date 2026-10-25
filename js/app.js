@@ -109,10 +109,16 @@ document.addEventListener('DOMContentLoaded', () => {
       localStorage.setItem('owenfleur_store_settings', JSON.stringify(settings));
     }
 
-    // 1. Announcement bar
-    const topBarLeft = document.querySelector('.top-bar > div:first-child');
-    if (topBarLeft && settings.announcement) {
-      topBarLeft.innerHTML = settings.announcement;
+    // 1. Top bar brand & address (Keep concise: shop name, address, hotline, links)
+    const topBarLeft = document.querySelector('.top-bar-left');
+    if (topBarLeft) {
+      const cs1 = settings.addressHanoi || 'CS1: Đống Đa - Hà Nội';
+      const cs2 = settings.addressHungYen || 'CS2: Văn Giang - Hưng Yên';
+      topBarLeft.innerHTML = `
+        <strong style="color: var(--gold-light); font-weight: 700; letter-spacing: 0.5px;">🌸 ${settings.name || 'Owen Fleur'}</strong>
+        <span class="top-bar-divider">•</span>
+        <span>📍 ${cs1} | ${cs2}</span>
+      `;
     }
 
     // 2. Hotline (Excluding floating action buttons to prevent layout breakage)

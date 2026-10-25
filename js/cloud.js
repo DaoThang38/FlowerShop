@@ -207,13 +207,25 @@ const OwenCloud = {
 
   // Update order status on Cloud
   async updateOrderStatus(orderId, status, notes = null) {
+    let resolvedNote = null;
+    if (notes !== null) {
+      if (typeof notes === 'object' && notes !== null) {
+        resolvedNote = notes.floristNotes || notes.notes || '';
+      } else {
+        resolvedNote = String(notes);
+      }
+      if (resolvedNote.includes('[object Object]')) {
+        resolvedNote = resolvedNote.replace(/\[object Object\]/g, '').trim();
+      }
+    }
+
     // Update local first
     try {
       const localOrders = JSON.parse(localStorage.getItem('owenfleur_orders')) || [];
       const ord = localOrders.find(o => o.id === orderId);
       if (ord) {
         ord.status = status;
-        if (notes !== null) ord.floristNotes = notes;
+        if (resolvedNote !== null) ord.floristNotes = resolvedNote;
         localStorage.setItem('owenfleur_orders', JSON.stringify(localOrders));
       }
     } catch (e) {}
@@ -222,7 +234,7 @@ const OwenCloud = {
     if (this.client) {
       try {
         const updateData = { status };
-        if (notes !== null) updateData.florist_notes = notes;
+        if (resolvedNote !== null) updateData.florist_notes = resolvedNote;
         await this.client.from('orders').update(updateData).eq('id', orderId);
       } catch (err) {
         console.error('🌸 Cloud update status error:', err);

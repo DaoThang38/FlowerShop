@@ -426,12 +426,19 @@ body {
   padding-bottom: 14px;
   border-bottom: 1px solid var(--admin-border);
   margin-bottom: 14px;
+  gap: 12px;
+}
+
+.order-header-top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
 .order-code-group {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
 }
 
 .order-id {
@@ -439,6 +446,40 @@ body {
   font-size: 1.15rem;
   font-weight: 700;
   color: var(--admin-primary);
+  white-space: nowrap;
+}
+
+.order-time-stamp {
+  font-size: 0.8rem;
+  color: var(--admin-muted);
+  white-space: nowrap;
+}
+
+.order-header-meta {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.order-total-price {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--admin-primary);
+  white-space: nowrap;
+}
+
+.order-total-price.is-cancelled {
+  color: #94a3b8;
+}
+
+.cancelled-tag {
+  background: #fee2e2;
+  color: #991b1b;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  white-space: nowrap;
 }
 
 .urgent-tag {
@@ -451,14 +492,16 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 4px;
+  white-space: nowrap;
   animation: pulseBadge 1.5s infinite;
 }
 
 .status-badge {
-  padding: 6px 14px;
+  padding: 5px 12px;
   border-radius: 999px;
-  font-size: 0.82rem;
+  font-size: 0.8rem;
   font-weight: 700;
+  white-space: nowrap;
 }
 
 .status-badge.pending {
@@ -508,16 +551,48 @@ body {
 .order-items-list li {
   display: flex;
   justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
   color: var(--admin-text);
+  font-size: 0.88rem;
+  line-height: 1.4;
+}
+
+.order-items-list .item-name {
+  flex: 1;
+  min-width: 0;
+  word-break: break-word;
+}
+
+.order-items-list .item-price {
+  white-space: nowrap;
+  font-weight: 600;
+  flex-shrink: 0;
 }
 
 .order-recipient-info {
   line-height: 1.6;
 }
 
+.order-recipient-info .recipient-line {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin-bottom: 3px;
+  font-size: 0.86rem;
+  line-height: 1.4;
+}
+
 .order-recipient-info .label {
   color: var(--admin-muted);
   font-size: 0.82rem;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.order-recipient-info .val {
+  flex: 1;
+  min-width: 0;
 }
 
 .order-card-message {
@@ -540,6 +615,19 @@ body {
   border-top: 1px dashed var(--admin-border);
 }
 
+.order-status-select-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.status-select-label {
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--admin-muted);
+  white-space: nowrap;
+}
+
 .status-selector {
   padding: 6px 12px;
   border-radius: var(--radius-sm);
@@ -553,7 +641,35 @@ body {
 
 .order-btns-group {
   display: flex;
-  gap: 10px;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-zalo {
+  background: #0068ff !important;
+  color: #fff !important;
+  border: none !important;
+}
+.btn-zalo:hover {
+  background: #0052cc !important;
+}
+.btn-call {
+  background: #f1f5f9 !important;
+  color: #0f172a !important;
+  border: 1px solid #cbd5e1 !important;
+}
+.btn-call:hover {
+  background: #e2e8f0 !important;
+}
+.btn-restore {
+  background: #e8f5e9 !important;
+  color: #1e5e3a !important;
+  border: 1px solid #c2e2d0 !important;
+}
+.btn-delete-perm {
+  background: #fee2e2 !important;
+  color: #991b1b !important;
+  border: 1px solid #fecaca !important;
 }
 
 /* ================= Store Settings Form ================= */
@@ -1272,57 +1388,146 @@ body {
 
   .admin-header {
     flex-direction: column;
-    align-items: flex-start;
-    gap: 12px;
-    margin-bottom: 20px;
+    align-items: stretch;
+    gap: 10px;
+    margin-bottom: 16px;
   }
 
   .admin-header h1 {
-    font-size: 1.45rem;
+    font-size: 1.35rem;
+    line-height: 1.25;
+  }
+
+  .admin-header p {
+    font-size: 0.8rem;
+    line-height: 1.4;
   }
 
   .admin-header-actions {
     width: 100%;
-    justify-content: space-between;
-    flex-wrap: wrap;
-    gap: 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
   }
 
-  /* 2x2 Metric Grid on Mobile */
+  #openManualOrderModalBtn {
+    width: 100%;
+    justify-content: center;
+    font-size: 0.85rem;
+    padding: 10px 14px;
+    white-space: nowrap;
+  }
+
+  .admin-user-profile {
+    width: 100%;
+    justify-content: space-between;
+    padding: 6px 12px;
+    border-radius: var(--radius-sm);
+  }
+
+  .user-avatar {
+    width: 30px;
+    height: 30px;
+    font-size: 1rem;
+    flex-shrink: 0;
+  }
+
+  .user-info {
+    flex: 1;
+    min-width: 0;
+    margin: 0 8px;
+  }
+
+  .user-name {
+    font-size: 0.8rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .user-role {
+    font-size: 0.68rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .btn-logout {
+    font-size: 0.72rem;
+    padding: 4px 10px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  /* 2x2 Metric Grid on Mobile: Compact & Clean Typography */
   .stats-grid {
     grid-template-columns: 1fr 1fr;
-    gap: 10px;
-    margin-bottom: 20px;
+    gap: 8px;
+    margin-bottom: 16px;
   }
 
   .stat-card {
-    padding: 14px 12px;
+    padding: 10px 10px;
+    min-height: 80px;
+    position: relative;
+    border-radius: 10px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: flex-start;
+  }
+
+  .stat-info {
+    width: 100%;
+    padding-right: 30px;
   }
 
   .stat-info h3 {
-    font-size: 0.78rem;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0;
+    text-transform: none;
+    line-height: 1.25;
+    margin-bottom: 4px;
+    word-break: normal;
+    hyphens: none;
   }
 
   .stat-value {
-    font-size: 1.35rem;
+    font-size: 1.15rem;
+    font-weight: 800;
+    white-space: nowrap;
+    line-height: 1.1;
   }
 
   .stat-icon {
-    font-size: 1.5rem;
+    position: absolute;
+    top: 10px;
+    right: 8px;
+    width: 28px;
+    height: 28px;
+    font-size: 1.15rem;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 
   /* Filter pills: swipeable bar on mobile */
   .orders-filter-bar {
     flex-direction: column;
     align-items: stretch;
-    gap: 12px;
+    gap: 10px;
   }
 
   .filter-pills {
+    display: flex;
     flex-wrap: nowrap;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
-    padding-bottom: 8px;
+    padding-bottom: 6px;
+    gap: 6px;
     scrollbar-width: none;
   }
 
@@ -1332,33 +1537,180 @@ body {
 
   .filter-pill {
     flex-shrink: 0;
-    padding: 8px 14px;
-    font-size: 0.82rem;
+    padding: 7px 12px;
+    font-size: 0.78rem;
+    white-space: nowrap;
   }
 
   .order-search-box {
     width: 100%;
   }
 
-  /* Order Cards on Mobile */
-  .order-item-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 8px;
+  /* Order Cards on Mobile: Fully Stacked, No Awkward Splitting */
+  .order-row-card {
+    padding: 14px 12px;
+    border-radius: 12px;
   }
 
-  .order-item-body {
-    grid-template-columns: 1fr;
-    gap: 16px;
+  .order-header-row {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+    padding-bottom: 10px;
+    margin-bottom: 12px;
+  }
+
+  .order-header-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+  }
+
+  .order-code-group {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: nowrap;
+  }
+
+  .order-id {
+    font-size: 0.95rem;
+    font-weight: 800;
+    white-space: nowrap;
+  }
+
+  .order-header-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+  }
+
+  .order-time-stamp {
+    font-size: 0.74rem;
+    color: var(--admin-muted);
+    white-space: nowrap;
+  }
+
+  .order-total-price {
+    font-size: 1.1rem;
+    font-weight: 800;
+    white-space: nowrap;
+  }
+
+  .status-badge {
+    padding: 4px 10px;
+    font-size: 0.75rem;
+    white-space: nowrap;
+  }
+
+  .urgent-tag {
+    padding: 3px 8px;
+    font-size: 0.7rem;
+    white-space: nowrap;
+  }
+
+  .cancelled-tag {
+    padding: 2px 6px;
+    font-size: 0.7rem;
+    white-space: nowrap;
+  }
+
+  .order-body-grid {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 12px !important;
+    font-size: 0.85rem !important;
+  }
+
+  .order-items-list li {
+    font-size: 0.84rem;
+    line-height: 1.4;
+  }
+
+  .order-recipient-info .recipient-line {
+    font-size: 0.84rem;
+    line-height: 1.4;
+  }
+
+  .order-recipient-info .label {
+    min-width: 82px;
+    font-size: 0.8rem;
   }
 
   .order-actions-bar {
-    flex-wrap: wrap;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    margin-top: 12px;
+    padding-top: 10px;
+  }
+
+  .order-status-select-wrap {
+    width: 100%;
+    display: flex;
+    align-items: center;
     gap: 8px;
   }
 
-  .order-actions-bar button, .order-actions-bar select {
-    flex: 1 1 calc(50% - 4px);
+  .status-select-label {
+    font-size: 0.8rem;
+    white-space: nowrap;
+  }
+
+  .status-selector {
+    flex: 1;
+    height: 38px;
+    font-size: 0.82rem;
+    padding: 4px 8px;
+  }
+
+  .order-btns-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    width: 100%;
+  }
+
+  .order-btns-group .btn-admin {
+    flex: 1 1 calc(33.333% - 6px);
+    min-width: 80px;
+    padding: 8px 6px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    white-space: nowrap;
+    text-align: center;
+    justify-content: center;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    text-decoration: none;
+  }
+
+  /* Admin Tables on Mobile: Horizontally Scrollable */
+  .products-admin-card {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border-radius: 12px;
+    padding: 16px 12px;
+  }
+
+  .admin-table {
+    min-width: 620px;
+  }
+
+  .admin-table th {
+    white-space: nowrap;
+    font-size: 0.82rem;
+    padding: 10px 12px;
+  }
+
+  .admin-table td {
+    font-size: 0.84rem;
+    padding: 10px 12px;
   }
 
   /* Custom Bouquet Builder View on Mobile */
@@ -1390,6 +1742,7 @@ body {
     flex-shrink: 0;
     padding: 8px 14px;
     font-size: 0.82rem;
+    white-space: nowrap;
   }
 
   .qr-config-preview-layout {
