@@ -692,9 +692,48 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }
 
-    // Handle Local File Upload using FileReader (Base64)
+    // Helper: Downscale & Compress Image to Max 800px & ~80KB (Avoid localStorage 5MB quota errors)
+    function resizeAndCompressImage(file, maxWidth = 800, maxHeight = 800, quality = 0.82) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const img = new Image();
+          img.onload = () => {
+            let width = img.width;
+            let height = img.height;
+
+            if (width > height) {
+              if (width > maxWidth) {
+                height = Math.round((height * maxWidth) / width);
+                width = maxWidth;
+              }
+            } else {
+              if (height > maxHeight) {
+                width = Math.round((width * maxHeight) / height);
+                height = maxHeight;
+              }
+            }
+
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+
+            const compressedBase64 = canvas.toDataURL('image/jpeg', quality);
+            resolve(compressedBase64);
+          };
+          img.onerror = reject;
+          img.src = e.target.result;
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+
+    // Handle Local File Upload with Auto-Compression
     if (prodEditImageFile) {
-      prodEditImageFile.addEventListener('change', (e) => {
+      prodEditImageFile.addEventListener('change', async (e) => {
         const file = e.target.files[0];
         if (!file) return;
 
@@ -703,17 +742,29 @@ document.addEventListener('DOMContentLoaded', () => {
           return;
         }
 
-        const reader = new FileReader();
-        reader.onload = function(evt) {
-          const base64Data = evt.target.result;
-          if (prodImageInput) prodImageInput.value = base64Data;
-          if (prodImagePreview) prodImagePreview.src = base64Data;
+        if (uploadFileText) {
+          uploadFileText.textContent = `⏳ Đang xử lý ảnh "${file.name}"...`;
+        }
+
+        try {
+          const compressedBase64 = await resizeAndCompressImage(file, 800, 800, 0.82);
+          if (prodImageInput) prodImageInput.value = compressedBase64;
+          if (prodImagePreview) prodImagePreview.src = compressedBase64;
           if (uploadFileText) {
-            uploadFileText.textContent = `✅ Đã chọn ảnh: ${file.name} (${Math.round(file.size / 1024)} KB)`;
+            uploadFileText.textContent = `✅ Đã chọn ảnh: ${file.name} (Đã tối ưu chuẩn web)`;
           }
-          showAdminToast(`📁 Đã nạp ảnh "${file.name}" thành công!`, 'success');
-        };
-        reader.readAsDataURL(file);
+          showAdminToast(`📁 Đã nạp và tối ưu ảnh "${file.name}" thành công!`, 'success');
+        } catch (err) {
+          console.error('File compression error:', err);
+          const reader = new FileReader();
+          reader.onload = function(evt) {
+            const rawBase64 = evt.target.result;
+            if (prodImageInput) prodImageInput.value = rawBase64;
+            if (prodImagePreview) prodImagePreview.src = rawBase64;
+            if (uploadFileText) uploadFileText.textContent = `✅ Đã chọn ảnh: ${file.name}`;
+          };
+          reader.readAsDataURL(file);
+        }
       });
     }
 
@@ -877,10 +928,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const tag = document.getElementById('prodEditTag').value.trim();
     const flowersStr = document.getElementById('prodEditFlowersIncluded').value.trim();
     const flowersIncluded = flowersStr ? flowersStr.split(',').map(s => s.trim()) : ['Hoa sáp thơm cao cấp'];
-    const image = document.getElementById('prodEditImage').value.trim();
+    const image = (document.getElementById('prodEditImage').value || '').trim() || (prodImagePreview ? prodImagePreview.src : '');
     const description = document.getElementById('prodEditDesc').value.trim();
     const flowerMeaning = document.getElementById('prodEditMeaning').value.trim();
     const careGuide = document.getElementById('prodEditCareGuide').value.trim();
+
+    if (!image) {
+      alert('Vui lòng chọn hoặc dán link ảnh cho mẫu hoa!');
+      return;
+    }
 
     if (id) {
       // Update existing
@@ -921,8 +977,15 @@ document.addEventListener('DOMContentLoaded', () => {
       showAdminToast(`🌸 Đã thêm mẫu hoa mới "${name}" vào website!`, 'success');
     }
 
-    // Save to localStorage
-    localStorage.setItem('owenfleur_products', JSON.stringify(state.products));
+    // Save to localStorage safely
+    try {
+      localStorage.setItem('owenfleur_products', JSON.stringify(state.products));
+    } catch (e) {
+      console.error('Storage error:', e);
+      alert('⚠️ Dung lượng bộ nhớ trình duyệt bị đầy! Vui lòng chọn ảnh nhẹ hơn.');
+      return;
+    }
+
     renderProductsTable();
     closeProductModal();
   }

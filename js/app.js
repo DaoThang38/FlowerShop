@@ -3,13 +3,19 @@
 // ==========================================================
 
 document.addEventListener('DOMContentLoaded', () => {
-  // Load dynamic products from localStorage or fallback to Soap Flowers dataset
-  const storedProducts = JSON.parse(localStorage.getItem('owenfleur_products'));
-  const isSoapFlowersData = storedProducts && storedProducts.some(p => p.name.includes('Sáp') || p.category === 'glitter');
+  // Load dynamic products from localStorage or fallback to dataset
+  let storedProducts = null;
+  try {
+    storedProducts = JSON.parse(localStorage.getItem('owenfleur_products'));
+  } catch(e) {}
+
+  const initialProducts = (Array.isArray(storedProducts) && storedProducts.length > 0) 
+    ? storedProducts 
+    : FLOWER_DATA.products;
 
   // Application State
   const state = {
-    products: (isSoapFlowersData && storedProducts.length > 0) ? storedProducts : FLOWER_DATA.products,
+    products: initialProducts,
     currentCategory: 'all',
     searchQuery: '',
     sortBy: 'default',
@@ -61,6 +67,22 @@ document.addEventListener('DOMContentLoaded', () => {
   updateCartUI();
   setupEventListeners();
   initOrderTracking();
+
+  // Real-time synchronization when Admin updates products or settings in another tab
+  window.addEventListener('storage', (e) => {
+    if (e.key === 'owenfleur_products') {
+      try {
+        const freshProds = JSON.parse(e.newValue || '[]');
+        if (Array.isArray(freshProds) && freshProds.length > 0) {
+          state.products = freshProds;
+          renderProducts();
+          console.log('🌸 Đã đồng bộ sản phẩm mới nhất từ Admin Portal!');
+        }
+      } catch (err) {}
+    } else if (e.key === 'owenfleur_store_settings') {
+      applyStoredSettingsToCustomerPortal();
+    }
+  });
 
   function applyStoredSettingsToCustomerPortal() {
     let settings = JSON.parse(localStorage.getItem('owenfleur_store_settings'));
