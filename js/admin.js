@@ -290,8 +290,43 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (tab === 'admins') {
           renderAdminsTable();
         }
+
+        // Auto-close sidebar on mobile after selecting a tab
+        if (window.innerWidth <= 992) {
+          const sidebar = document.querySelector('.admin-sidebar');
+          const backdrop = document.getElementById('adminSidebarBackdrop');
+          if (sidebar) sidebar.classList.remove('mobile-open');
+          if (backdrop) backdrop.classList.remove('active');
+        }
       });
     });
+
+    // Mobile Hamburger Menu & Backdrop Toggle
+    const mobileMenuBtn = document.getElementById('adminMobileMenuBtn');
+    const sidebar = document.querySelector('.admin-sidebar');
+    const backdrop = document.getElementById('adminSidebarBackdrop');
+    const mobileAddOrderQuickBtn = document.getElementById('mobileAddOrderQuickBtn');
+
+    if (mobileMenuBtn && sidebar) {
+      mobileMenuBtn.addEventListener('click', () => {
+        sidebar.classList.toggle('mobile-open');
+        if (backdrop) backdrop.classList.toggle('active');
+      });
+    }
+
+    if (backdrop && sidebar) {
+      backdrop.addEventListener('click', () => {
+        sidebar.classList.remove('mobile-open');
+        backdrop.classList.remove('active');
+      });
+    }
+
+    if (mobileAddOrderQuickBtn) {
+      mobileAddOrderQuickBtn.addEventListener('click', () => {
+        const manualBtn = document.getElementById('openManualOrderModalBtn');
+        if (manualBtn) manualBtn.click();
+      });
+    }
 
     // Filter pills in Orders tab
     filterPills.forEach(pill => {

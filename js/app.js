@@ -433,6 +433,12 @@ document.addEventListener('DOMContentLoaded', () => {
     cartBadge.textContent = totalCount;
     cartBadge.style.display = totalCount > 0 ? 'flex' : 'none';
 
+    const mobileCartBadge = document.getElementById('mobileCartBadge');
+    if (mobileCartBadge) {
+      mobileCartBadge.textContent = totalCount;
+      mobileCartBadge.style.display = totalCount > 0 ? 'inline-block' : 'none';
+    }
+
     // Render cart items
     if (state.cart.length === 0) {
       cartItemsContainer.innerHTML = `
@@ -1433,6 +1439,60 @@ document.addEventListener('DOMContentLoaded', () => {
           emailInput.value = '';
         }
       });
+    }
+
+    // Mobile Bottom Navigation Listeners
+    const btnNavHome = document.getElementById('btnNavHome');
+    const btnNavCollection = document.getElementById('btnNavCollection');
+    const btnNavBuilder = document.getElementById('btnNavBuilder');
+    const btnNavTrack = document.getElementById('btnNavTrack');
+    const btnNavCart = document.getElementById('btnNavCart');
+
+    if (btnNavHome) {
+      btnNavHome.addEventListener('click', (e) => {
+        e.preventDefault();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        setActiveMobileNav(btnNavHome);
+      });
+    }
+
+    if (btnNavCollection) {
+      btnNavCollection.addEventListener('click', (e) => {
+        e.preventDefault();
+        const sec = document.getElementById('collectionSection');
+        if (sec) sec.scrollIntoView({ behavior: 'smooth' });
+        setActiveMobileNav(btnNavCollection);
+      });
+    }
+
+    if (btnNavBuilder) {
+      btnNavBuilder.addEventListener('click', (e) => {
+        e.preventDefault();
+        const sec = document.getElementById('builderSection');
+        if (sec) sec.scrollIntoView({ behavior: 'smooth' });
+        setActiveMobileNav(btnNavBuilder);
+      });
+    }
+
+    if (btnNavTrack) {
+      btnNavTrack.addEventListener('click', (e) => {
+        e.preventDefault();
+        const trackModal = document.getElementById('orderTrackingModal');
+        if (trackModal) trackModal.classList.add('active');
+        setActiveMobileNav(btnNavTrack);
+      });
+    }
+
+    if (btnNavCart) {
+      btnNavCart.addEventListener('click', (e) => {
+        e.preventDefault();
+        openCartDrawer();
+      });
+    }
+
+    function setActiveMobileNav(activeBtn) {
+      document.querySelectorAll('.mobile-nav-btn').forEach(b => b.classList.remove('active'));
+      if (activeBtn) activeBtn.classList.add('active');
     }
   }
 
